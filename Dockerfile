@@ -3,7 +3,7 @@
 
 FROM python:3.12-slim AS base
 
-# Install Temurin JRE 21 (required by signal-cli)
+# Install Temurin JRE 25 (required by signal-cli 0.14.x)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         wget \
@@ -15,14 +15,14 @@ RUN apt-get update && \
     echo "deb [signed-by=/etc/apt/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $(. /etc/os-release && echo $VERSION_CODENAME) main" \
         > /etc/apt/sources.list.d/adoptium.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends temurin-21-jre && \
+    apt-get install -y --no-install-recommends temurin-25-jre && \
     # Cleanup
     apt-get purge -y wget gnupg && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install signal-cli
-ARG SIGNAL_CLI_VERSION=0.13.23
+ARG SIGNAL_CLI_VERSION=0.14.1
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     curl -sL "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_CLI_VERSION}/signal-cli-${SIGNAL_CLI_VERSION}.tar.gz" \

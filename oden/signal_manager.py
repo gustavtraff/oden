@@ -99,13 +99,13 @@ class SignalManager:
             return path
 
         # Check for signal-cli in project directory (development)
-        bundled_path = "./signal-cli-0.13.23/bin/signal-cli"
+        bundled_path = "./signal-cli-0.14.1/bin/signal-cli"
         if os.path.exists(bundled_path):
             logger.info(f"Found bundled signal-cli: {bundled_path}")
             return os.path.abspath(bundled_path)
 
         # Also check older version
-        bundled_path_old = "./signal-cli-0.13.22/bin/signal-cli"
+        bundled_path_old = "./signal-cli-0.13.23/bin/signal-cli"
         if os.path.exists(bundled_path_old):
             logger.info(f"Found bundled signal-cli: {bundled_path_old}")
             return os.path.abspath(bundled_path_old)
@@ -261,7 +261,7 @@ class SignalLinker:
             return path
 
         # Check for signal-cli in project directory
-        for version in ["0.13.23", "0.13.22"]:
+        for version in ["0.14.1", "0.13.23"]:
             bundled_path = f"./signal-cli-{version}/bin/signal-cli"
             if os.path.exists(bundled_path):
                 return os.path.abspath(bundled_path)
@@ -359,7 +359,13 @@ class SignalLinker:
             else:
                 error_output = stderr.decode("utf-8") if stderr else "Unknown error"
                 self.status = "error"
-                self.error = error_output
+                if "Invalid ACI" in error_output:
+                    self.error = (
+                        "Länkning misslyckades: signal-cli-versionen är för gammal. "
+                        "Uppdatera till signal-cli 0.14.0 eller nyare för att åtgärda detta."
+                    )
+                else:
+                    self.error = error_output
                 logger.error(f"Link failed: {error_output}")
                 return False
 
@@ -435,7 +441,7 @@ class SignalRegistrar:
             return path
 
         # Check for signal-cli in project directory
-        for version in ["0.13.23", "0.13.22"]:
+        for version in ["0.14.1", "0.13.23"]:
             bundled_path = f"./signal-cli-{version}/bin/signal-cli"
             if os.path.exists(bundled_path):
                 return os.path.abspath(bundled_path)

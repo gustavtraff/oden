@@ -155,5 +155,57 @@ class TestIsSignalCliRunning(unittest.TestCase):
         self.assertFalse(is_signal_cli_running("host", "port"))
 
 
+class TestSignalLinkerInvalidACI(unittest.IsolatedAsyncioTestCase):
+    """Tests for SignalLinker Invalid ACI error handling."""
+
+    @patch("oden.signal_manager.get_bundled_signal_cli_path", return_value=None)
+    @patch("shutil.which", return_value="/usr/bin/signal-cli")
+    async def test_wait_for_link_invalid_aci_shows_friendly_error(self, mock_which, mock_bundled):
+        """Tests that Invalid ACI error produces a user-friendly error message."""
+        from oden.signal_manager import SignalLinker
+
+        linker = SignalLinker(device_name="Test")
+
+        # Create a mock process that simulates the Invalid ACI error
+        mock_process = AsyncMock()
+        mock_process.returncode = 1
+        mock_process.communicate.return_value = (
+            b"",
+            b"java.lang.IllegalArgumentException: Invalid ACI!\n"
+            b"at org.signal.core.models.ServiceId$ACI$Companion.parseOrThrow(ServiceId.kt:164)",
+        )
+        linker.process = mock_process
+
+        result = await linker.wait_for_link(timeout=5.0)
+
+        self.assertFalse(result)
+        self.assertEqual(linker.status, "error")
+        self.assertIn("signal-cli", linker.error)
+        self.assertIn("0.14.0", linker.error)
+        self.assertNotIn("IllegalArgumentException", linker.error)
+
+    @patch("oden.signal_manager.get_bundled_signal_cli_path", return_value=None)
+    @patch("shutil.which", return_value="/usr/bin/signal-cli")
+    async def test_wait_for_link_other_error_shows_raw_message(self, mock_which, mock_bundled):
+        """Tests that non-ACI errors show the raw error message."""
+        from oden.signal_manager import SignalLinker
+
+        linker = SignalLinker(device_name="Test")
+
+        mock_process = AsyncMock()
+        mock_process.returncode = 1
+        mock_process.communicate.return_value = (
+            b"",
+            b"Some other error occurred",
+        )
+        linker.process = mock_process
+
+        result = await linker.wait_for_link(timeout=5.0)
+
+        self.assertFalse(result)
+        self.assertEqual(linker.status, "error")
+        self.assertEqual(linker.error, "Some other error occurred")
+
+
 if __name__ == "__main__":
     unittest.main()

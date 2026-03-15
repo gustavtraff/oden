@@ -15,7 +15,7 @@ C_BOLD='\033[1m'
 C_YELLOW='\033[0;33m'
 
 # --- Configuration ---
-SIGNAL_CLI_VERSION="0.13.23"
+SIGNAL_CLI_VERSION="0.14.1"
 ODEN_CONFIG_DIR="$HOME/.oden"
 
 # macOS binary (universal - works on both Intel and Apple Silicon)
@@ -100,9 +100,9 @@ else
     fi
 fi
 
-# Check for Java 21+
+# Check for Java 25+
 check_java() {
-    echo -n "Kontrollerar Java 21+... "
+    echo -n "Kontrollerar Java 25+... "
     if ! command -v java &> /dev/null; then
         print_error "Inte hittat."
         if $HOMEBREW_INSTALLED; then
@@ -121,15 +121,15 @@ check_java() {
                 exit 1
             fi
         else
-            print_error "Installera Java 21+ från https://adoptium.net/"
+            print_error "Installera Java 25+ från https://adoptium.net/"
             exit 1
         fi
     else
         JAVA_VERSION=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
         JAVA_MAJOR_VERSION=$(echo "$JAVA_VERSION" | cut -d. -f1)
 
-        if [[ "$JAVA_MAJOR_VERSION" -lt 21 ]]; then
-            print_warning "Hittade version $JAVA_VERSION, men behöver 21+."
+        if [[ "$JAVA_MAJOR_VERSION" -lt 25 ]]; then
+            print_warning "Hittade version $JAVA_VERSION, men behöver 25+."
             if $HOMEBREW_INSTALLED; then
                 read -p "Installera nyare openjdk med Homebrew? (J/n): " INSTALL_JAVA
                 if [[ -z "$INSTALL_JAVA" || "$INSTALL_JAVA" =~ ^[JjYy]$ ]]; then
@@ -141,11 +141,11 @@ check_java() {
                     fi
                     check_java
                 else
-                    print_error "Java 21+ krävs för signal-cli. Avbryter."
+                    print_error "Java 25+ krävs för signal-cli. Avbryter."
                     exit 1
                 fi
             else
-                print_error "Installera Java 21+ från https://adoptium.net/"
+                print_error "Installera Java 25+ från https://adoptium.net/"
                 exit 1
             fi
         else
@@ -175,8 +175,8 @@ elif [ -f "./signal-cli-${SIGNAL_CLI_VERSION}/bin/signal-cli" ]; then
     SIGNAL_CLI_EXEC="$(pwd)/signal-cli-${SIGNAL_CLI_VERSION}/bin/signal-cli"
     print_success "Hittade signal-cli: $SIGNAL_CLI_EXEC"
 # 4. Check older version
-elif [ -f "./signal-cli-0.13.22/bin/signal-cli" ]; then
-    SIGNAL_CLI_EXEC="$(pwd)/signal-cli-0.13.22/bin/signal-cli"
+elif [ -f "./signal-cli-0.13.23/bin/signal-cli" ]; then
+    SIGNAL_CLI_EXEC="$(pwd)/signal-cli-0.13.23/bin/signal-cli"
     print_success "Hittade signal-cli: $SIGNAL_CLI_EXEC"
 # 5. Check standard locations
 elif [ -f "/usr/local/bin/signal-cli" ]; then

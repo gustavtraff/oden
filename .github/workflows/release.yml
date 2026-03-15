@@ -69,7 +69,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: build-dmg/signal-cli
-          key: signal-cli-0.13.23-v1
+          key: signal-cli-0.14.1-v1
 
       # Download JRE x64 (for Intel build - works via Rosetta on Apple Silicon)
       - name: Download JRE x64
@@ -88,7 +88,7 @@ jobs:
         if: steps.cache-signal-cli.outputs.cache-hit != 'true'
         run: |
           mkdir -p build-dmg/signal-cli
-          SIGNAL_CLI_VERSION="0.13.23"
+          SIGNAL_CLI_VERSION="0.14.1"
           curl -L -o signal-cli.tar.gz "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_CLI_VERSION}/signal-cli-${SIGNAL_CLI_VERSION}.tar.gz"
           tar -xzf signal-cli.tar.gz
           mv signal-cli-${SIGNAL_CLI_VERSION}/* build-dmg/signal-cli/
@@ -361,7 +361,7 @@ jobs:
             
             ### From Source
             1. Download `Oden-${{ steps.version.outputs.VERSION }}-source.zip`
-            2. Install signal-cli and Java 21+
+            2. Install signal-cli and Java 25+
             3. `pip install -e .` then `python -m oden`
             
             The web-based setup wizard will guide you through configuration on first run at `http://localhost:8080/setup`.
