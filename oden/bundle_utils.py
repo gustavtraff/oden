@@ -69,7 +69,12 @@ def get_bundled_java_path() -> str | None:
         logger.warning(f"Unknown architecture: {arch}")
         return None
 
-    java_path = bundle_path / jre_dir / "bin" / "java"
+    # macOS Temurin JRE tarballs use a Contents/Home/ structure (macOS app bundle convention)
+    if system == "Darwin":
+        java_path = bundle_path / jre_dir / "Contents" / "Home" / "bin" / "java"
+    else:
+        java_path = bundle_path / jre_dir / "bin" / "java"
+
     if java_path.exists():
         return str(java_path)
     else:
