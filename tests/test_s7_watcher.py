@@ -207,5 +207,126 @@ class TestSignalLinkerInvalidACI(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(linker.error, "Some other error occurred")
 
 
+class TestSignalLinkerStartLink(unittest.IsolatedAsyncioTestCase):
+    """Tests for SignalLinker.start_link() multi-line URI detection."""
+
+    @patch("oden.signal_manager.get_bundled_signal_cli_path", return_value=None)
+    @patch("shutil.which", return_value="/usr/bin/signal-cli")
+    async def test_start_link_uri_on_first_line(self, mock_which, mock_bundled):
+        """Tests that a URI on the first line is detected."""
+        from oden.signal_manager import SignalLinker
+
+        linker = SignalLinker(device_name="Test")
+        uri = "sgnl://linkdevice?uuid=abc123&pub_key=xyz"
+
+        mock_process = AsyncMock()
+        mock_stdout = AsyncMock()
+        mock_stdout.readline = AsyncMock(return_value=f"{uri}\n".encode())
+        mock_process.stdout = mock_stdout
+        mock_process.stderr = AsyncMock()
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await linker.start_link()
+
+        self.assertEqual(result, uri)
+        self.assertEqual(linker.link_uri, uri)
+        self.assertEqual(linker.status, "waiting")
+
+    @patch("oden.signal_manager.get_bundled_signal_cli_path", return_value=None)
+    @patch("shutil.which", return_value="/usr/bin/signal-cli")
+    async def test_start_link_uri_after_warnings(self, mock_which, mock_bundled):
+        """Tests that a URI is found even after warning lines."""
+        from oden.signal_manager import SignalLinker
+
+        linker = SignalLinker(device_name="Test")
+        uri = "sgnl://linkdevice?uuid=abc123&pub_key=xyz"
+
+        lines = [
+            b"WARNING: Using incubator modules\n",
+            b"Mar 15, 2026 12:00:00 INFO: Initializing\n",
+            f"{uri}\n".encode(),
+        ]
+        call_count = 0
+
+        async def mock_readline():
+            nonlocal call_count
+            if call_count < len(lines):
+                line = lines[call_count]
+                call_count += 1
+                return line
+            return b""
+
+        mock_process = AsyncMock()
+        mock_stdout = AsyncMock()
+        mock_stdout.readline = mock_readline
+        mock_process.stdout = mock_stdout
+        mock_process.stderr = AsyncMock()
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await linker.start_link()
+
+        self.assertEqual(result, uri)
+        self.assertEqual(linker.link_uri, uri)
+
+    @patch("oden.signal_manager.get_bundled_signal_cli_path", return_value=None)
+    @patch("shutil.which", return_value="/usr/bin/signal-cli")
+    async def test_start_link_no_uri_eof(self, mock_which, mock_bundled):
+        """Tests error when signal-cli exits without producing a URI."""
+        from oden.signal_manager import SignalLinker
+
+        linker = SignalLinker(device_name="Test")
+
+        lines = [b"Some warning text\n", b""]
+        call_count = 0
+
+        async def mock_readline():
+            nonlocal call_count
+            if call_count < len(lines):
+                line = lines[call_count]
+                call_count += 1
+                return line
+            return b""
+
+        mock_process = AsyncMock()
+        mock_stdout = AsyncMock()
+        mock_stdout.readline = mock_readline
+        mock_process.stdout = mock_stdout
+        mock_stderr = AsyncMock()
+        mock_stderr.read = AsyncMock(return_value=b"Error: something went wrong")
+        mock_process.stderr = mock_stderr
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await linker.start_link()
+
+        self.assertIsNone(result)
+        self.assertEqual(linker.status, "error")
+        self.assertIn("signal-cli", linker.error)
+        # Should include stderr in error message
+        self.assertIn("something went wrong", linker.error)
+
+    @patch("oden.signal_manager.get_bundled_signal_cli_path", return_value=None)
+    @patch("shutil.which", return_value="/usr/bin/signal-cli")
+    async def test_start_link_no_uri_no_stderr(self, mock_which, mock_bundled):
+        """Tests error when signal-cli exits without URI and no stderr."""
+        from oden.signal_manager import SignalLinker
+
+        linker = SignalLinker(device_name="Test")
+
+        mock_process = AsyncMock()
+        mock_stdout = AsyncMock()
+        mock_stdout.readline = AsyncMock(return_value=b"")
+        mock_process.stdout = mock_stdout
+        mock_stderr = AsyncMock()
+        mock_stderr.read = AsyncMock(return_value=b"")
+        mock_process.stderr = mock_stderr
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await linker.start_link()
+
+        self.assertIsNone(result)
+        self.assertEqual(linker.status, "error")
+        self.assertIn("signal-cli", linker.error)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -296,26 +296,68 @@ class SignalLinker:
                 env=self.env,
             )
 
-            # Read the first line which should contain the link URI
+            # Read lines from stdout looking for the link URI.
+            # signal-cli may output warnings or other text before the
+            # actual sgnl:// URI, so we scan multiple lines.
+            non_uri_lines: list[str] = []
             if self.process.stdout:
-                line = await asyncio.wait_for(
-                    self.process.stdout.readline(),
-                    timeout=10.0,
-                )
-                if line:
-                    uri = line.decode("utf-8").strip()
-                    if uri.startswith("sgnl://"):
-                        self.link_uri = uri
-                        logger.info(f"Got link URI: {uri[:50]}...")
-                        return uri
+                try:
+                    deadline = asyncio.get_event_loop().time() + 30.0
+                    while True:
+                        remaining = deadline - asyncio.get_event_loop().time()
+                        if remaining <= 0:
+                            raise asyncio.TimeoutError()
+                        line = await asyncio.wait_for(
+                            self.process.stdout.readline(),
+                            timeout=remaining,
+                        )
+                        if not line:
+                            # EOF – process closed stdout without
+                            # producing a link URI
+                            break
+                        text = line.decode("utf-8").strip()
+                        if text.startswith("sgnl://"):
+                            self.link_uri = text
+                            logger.info(f"Got link URI: {text[:50]}...")
+                            return text
+                        if text:
+                            non_uri_lines.append(text)
+                            logger.debug("signal-cli output (not URI): %s", text)
+                except asyncio.TimeoutError:
+                    self.status = "error"
+                    self.error = "Tidsgränsen överskreds i väntan på länk-URI från signal-cli"
+                    if non_uri_lines:
+                        logger.error(
+                            "Timeout waiting for link URI. signal-cli output so far: %s",
+                            "\n".join(non_uri_lines),
+                        )
+                    await self.cancel()
+                    return None
+
+            # Collect stderr for diagnostics
+            stderr_text = ""
+            if self.process.stderr:
+                try:
+                    stderr_data = await asyncio.wait_for(self.process.stderr.read(), timeout=2.0)
+                    stderr_text = stderr_data.decode("utf-8").strip()
+                except asyncio.TimeoutError:
+                    pass
 
             self.status = "error"
-            self.error = "Failed to get link URI from signal-cli"
+            if non_uri_lines:
+                logger.error(
+                    "No link URI found in signal-cli output: %s",
+                    "\n".join(non_uri_lines),
+                )
+            if stderr_text:
+                logger.error("signal-cli stderr: %s", stderr_text)
+
+            self.error = "Kunde inte hämta länk-URI från signal-cli" + (f": {stderr_text}" if stderr_text else "")
             return None
 
         except asyncio.TimeoutError:
             self.status = "error"
-            self.error = "Timeout waiting for link URI"
+            self.error = "Tidsgränsen överskreds i väntan på länk-URI från signal-cli"
             await self.cancel()
             return None
         except Exception as e:
