@@ -206,12 +206,13 @@ class TestProcessing(unittest.IsolatedAsyncioTestCase):
     @patch("builtins.open", new_callable=mock_open)
     @patch("os.makedirs")
     @patch("os.path.exists")
+    @patch("oden.processing.upsert_group")
     @patch("oden.config.VAULT_PATH", "mock_vault")
     @patch("oden.config.FILENAME_FORMAT", "classic")
     @patch("oden.config.WHITELIST_GROUPS", [])
     @patch("oden.config.IGNORED_GROUPS", set())
     async def test_process_message_duplicate_creates_unique_file(
-        self, mock_exists, mock_makedirs, mock_open, mock_render
+        self, _mock_upsert, mock_exists, mock_makedirs, mock_open, mock_render
     ):
         """Tests that a duplicate message creates a new file with suffix."""
         # First file exists, second doesn't (simulating -1 suffix)

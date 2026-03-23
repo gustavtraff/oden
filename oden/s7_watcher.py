@@ -160,12 +160,15 @@ async def send_startup_message(writer: asyncio.StreamWriter, groups: list[dict] 
 async def log_groups(writer: asyncio.StreamWriter) -> list[dict]:
     """Fetches and logs all groups the account is a member of.
 
-    Reads config values dynamically to support live reload.
+    Persists groups to the database so they survive restarts.
+    Falls back to the database if the RPC call fails.
 
     Returns:
-        List of group dictionaries from signal-cli.
+        List of group dictionaries (from signal-cli or DB).
     """
     from oden import config as cfg
+    from oden.config import CONFIG_DB
+    from oden.config_db import get_all_groups, upsert_groups_bulk
 
     app_state = get_app_state()
 
@@ -179,6 +182,11 @@ async def log_groups(writer: asyncio.StreamWriter) -> list[dict]:
             groups = response["result"]
             # Cache groups in app_state for web GUI access
             app_state.update_groups(groups)
+
+            # Persist to database
+            count = upsert_groups_bulk(CONFIG_DB, groups)
+            if count:
+                logger.debug("Persisted %d groups to database", count)
 
             if not groups:
                 logger.info("No groups found for this account.")
@@ -196,13 +204,24 @@ async def log_groups(writer: asyncio.StreamWriter) -> list[dict]:
                 logger.info(f"Ignored groups configured: {len(cfg.IGNORED_GROUPS)}, matched: {ignored_count}")
 
             return groups
-        else:
-            logger.debug(f"Unexpected response for listGroups: {response}")
-            return []
+
+        # RPC returned no result — fall back to DB
+        logger.debug("listGroups returned no result, loading from database")
 
     except Exception as e:
-        logger.error(f"ERROR fetching groups: {e}")
-        return []
+        logger.warning(f"Could not fetch groups via RPC: {e} — loading from database")
+
+    # Fallback: load from database
+    db_groups = get_all_groups(CONFIG_DB)
+    if db_groups:
+        logger.info("Loaded %d group(s) from database (offline cache)", len(db_groups))
+        app_state.update_groups(
+            [
+                {"id": g["id"], "name": g["name"], "members": [None] * g["memberCount"], "isMember": g["isMember"]}
+                for g in db_groups
+            ]
+        )
+    return db_groups
 
 
 async def update_profile(writer: asyncio.StreamWriter, display_name: str | None) -> None:

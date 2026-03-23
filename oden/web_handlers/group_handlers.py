@@ -10,25 +10,42 @@ from aiohttp import web
 from oden import config as cfg
 from oden.app_state import get_app_state
 from oden.config import CONFIG_DB, reload_config
-from oden.config_db import get_config_value, set_config_value
+from oden.config_db import get_all_groups, get_config_value, set_config_value, upsert_groups_bulk
 
 logger = logging.getLogger(__name__)
 
 
 async def groups_handler(request: web.Request) -> web.Response:
-    """Return list of groups the account is a member of."""
+    """Return list of groups the account is a member of.
+
+    Merges the in-memory cache (from listGroups RPC) with the database
+    so groups discovered from incoming messages are always visible.
+    """
     app_state = get_app_state()
-    groups = []
+
+    # Start with DB groups (keyed by id)
+    db_groups = get_all_groups(CONFIG_DB)
+    merged: dict[str, dict] = {}
+    for g in db_groups:
+        if g.get("isMember", True):
+            merged[g["id"]] = {
+                "id": g["id"],
+                "name": g["name"],
+                "memberCount": g.get("memberCount", 0),
+            }
+
+    # Overlay in-memory groups (fresher data from signal-cli)
     for group in app_state.groups:
-        # Only include groups where user is actually a member
         if group.get("isMember", True) and not group.get("invitedToGroup", False):
-            groups.append(
-                {
-                    "id": group.get("id"),
+            gid = group.get("id")
+            if gid:
+                merged[gid] = {
+                    "id": gid,
                     "name": group.get("name", "Okänd grupp"),
                     "memberCount": len(group.get("members", [])),
                 }
-            )
+
+    groups = sorted(merged.values(), key=lambda g: g.get("name", ""))
     return web.json_response(
         {"groups": groups, "ignoredGroups": cfg.IGNORED_GROUPS, "whitelistGroups": cfg.WHITELIST_GROUPS}
     )
@@ -268,4 +285,35 @@ async def decline_invitation_handler(request: web.Request) -> web.Response:
         return web.json_response({"success": False, "error": "Ogiltig JSON"}, status=400)
     except Exception as e:
         logger.error(f"Error declining invitation: {e}")
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
+async def refresh_groups_handler(request: web.Request) -> web.Response:
+    """Re-fetch groups from signal-cli and update the database."""
+    app_state = get_app_state()
+    if not app_state.writer:
+        return web.json_response(
+            {"success": False, "error": "Inte ansluten till signal-cli"},
+            status=503,
+        )
+
+    try:
+        response = await app_state.send_jsonrpc(
+            "listGroups",
+            params={"account": cfg.SIGNAL_NUMBER},
+            timeout=10.0,
+        )
+        if response and "result" in response:
+            groups = response["result"]
+            app_state.update_groups(groups)
+            count = upsert_groups_bulk(CONFIG_DB, groups)
+            logger.info("Refreshed %d groups from signal-cli", count)
+            return web.json_response({"success": True, "count": count})
+
+        return web.json_response(
+            {"success": False, "error": "Inget svar från signal-cli"},
+            status=502,
+        )
+    except Exception as e:
+        logger.error("Error refreshing groups: %s", e)
         return web.json_response({"success": False, "error": str(e)}, status=500)

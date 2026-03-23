@@ -28,6 +28,7 @@ from oden.web_handlers.group_handlers import (
     groups_handler,
     invitations_handler,
     join_group_handler,
+    refresh_groups_handler,
     toggle_ignore_group_handler,
     toggle_whitelist_group_handler,
 )
@@ -79,6 +80,7 @@ __all__ = [
     "accounts_force_delete_handler",
     # Group handlers
     "groups_handler",
+    "refresh_groups_handler",
     "toggle_ignore_group_handler",
     "toggle_whitelist_group_handler",
     "join_group_handler",

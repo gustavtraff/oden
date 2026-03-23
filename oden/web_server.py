@@ -34,6 +34,7 @@ from oden.web_handlers import (
     groups_handler,
     invitations_handler,
     join_group_handler,
+    refresh_groups_handler,
     response_create_handler,
     response_delete_handler,
     response_get_handler,
@@ -75,6 +76,7 @@ PROTECTED_ENDPOINTS = {
     "/api/toggle-whitelist-group",  # POST - modify group settings
     "/api/invitations/accept",  # POST - accept group invitation
     "/api/invitations/decline",  # POST - decline group invitation
+    "/api/groups/refresh",  # POST - re-fetch groups from signal-cli
     "/api/config/export",  # GET - export config as INI
     "/api/config/reset",  # DELETE - reset config to defaults
     "/api/setup/reset",  # DELETE - re-run setup
@@ -223,6 +225,7 @@ def create_app(setup_mode: bool = False) -> web.Application:
         app.router.add_post("/api/invitations/accept", accept_invitation_handler)
         app.router.add_post("/api/invitations/decline", decline_invitation_handler)
         app.router.add_get("/api/groups", groups_handler)
+        app.router.add_post("/api/groups/refresh", refresh_groups_handler)
         app.router.add_post("/api/toggle-ignore-group", toggle_ignore_group_handler)
         app.router.add_post("/api/toggle-whitelist-group", toggle_whitelist_group_handler)
         app.router.add_post("/api/config-save", config_save_handler)

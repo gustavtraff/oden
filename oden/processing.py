@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import datetime
 import json
 import logging
@@ -9,7 +10,7 @@ from typing import Any
 from oden import config as cfg
 from oden.attachment_handler import save_attachments
 from oden.config import CONFIG_DB
-from oden.config_db import get_response_by_keyword
+from oden.config_db import get_response_by_keyword, upsert_group
 from oden.formatting import (
     _format_quote,
     create_fileid,
@@ -181,6 +182,11 @@ async def process_message(obj: dict[str, Any], reader: asyncio.StreamReader, wri
     elif group_title and group_title in cfg.IGNORED_GROUPS:
         logger.info(f"Skipping message from ignored group: {group_title}")
         return
+
+    # Track group in database so it persists across restarts
+    if group_title and group_id:
+        with contextlib.suppress(Exception):
+            upsert_group(cfg.CONFIG_DB, group_id, group_title)
 
     # If message starts with '--', ignore it.
     if msg and msg.strip().startswith("--"):

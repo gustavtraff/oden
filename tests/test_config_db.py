@@ -6,12 +6,16 @@ from pathlib import Path
 
 from oden.config_db import (
     create_response,
+    delete_group,
     delete_response,
+    get_all_groups,
     get_all_responses,
     get_response_by_id,
     get_response_by_keyword,
     init_db,
     save_response,
+    upsert_group,
+    upsert_groups_bulk,
 )
 
 
@@ -143,9 +147,9 @@ class TestResponsesCRUD(unittest.TestCase):
 
 
 class TestSchemaVersion(unittest.TestCase):
-    """Test that schema migration bumps version to 2."""
+    """Test that schema migration bumps version to 3."""
 
-    def test_schema_version_is_2(self):
+    def test_schema_version_is_3(self):
         import sqlite3
 
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
@@ -160,7 +164,7 @@ class TestSchemaVersion(unittest.TestCase):
         conn.close()
         db_path.unlink(missing_ok=True)
 
-        self.assertEqual(row[0], "2")
+        self.assertEqual(row[0], "3")
 
     def test_responses_table_exists(self):
         import sqlite3
@@ -178,6 +182,86 @@ class TestSchemaVersion(unittest.TestCase):
         db_path.unlink(missing_ok=True)
 
         self.assertIsNotNone(row)
+
+    def test_groups_table_exists(self):
+        import sqlite3
+
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = Path(f.name)
+        db_path.unlink(missing_ok=True)
+        init_db(db_path)
+
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='groups'")
+        row = cursor.fetchone()
+        conn.close()
+        db_path.unlink(missing_ok=True)
+
+        self.assertIsNotNone(row)
+
+
+class TestGroupsCRUD(unittest.TestCase):
+    """Test CRUD operations for the groups table."""
+
+    def setUp(self):
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            self.db_path = Path(tmp.name)
+        self.db_path.unlink(missing_ok=True)
+        init_db(self.db_path)
+
+    def tearDown(self):
+        self.db_path.unlink(missing_ok=True)
+
+    def test_upsert_and_get_group(self):
+        upsert_group(self.db_path, "abc123", "Test Group", member_count=5)
+        groups = get_all_groups(self.db_path)
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0]["id"], "abc123")
+        self.assertEqual(groups[0]["name"], "Test Group")
+        self.assertEqual(groups[0]["memberCount"], 5)
+        self.assertTrue(groups[0]["isMember"])
+
+    def test_upsert_updates_existing(self):
+        upsert_group(self.db_path, "abc123", "Old Name", member_count=2)
+        upsert_group(self.db_path, "abc123", "New Name", member_count=10)
+        groups = get_all_groups(self.db_path)
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0]["name"], "New Name")
+        self.assertEqual(groups[0]["memberCount"], 10)
+
+    def test_bulk_upsert(self):
+        signal_groups = [
+            {"id": "g1", "name": "Alpha", "members": [1, 2, 3], "isMember": True},
+            {"id": "g2", "name": "Beta", "members": [1], "isMember": True},
+            {"id": "g3", "name": "Gamma", "members": [], "isMember": False},
+        ]
+        count = upsert_groups_bulk(self.db_path, signal_groups)
+        self.assertEqual(count, 3)
+
+        groups = get_all_groups(self.db_path)
+        self.assertEqual(len(groups), 3)
+        names = [g["name"] for g in groups]
+        self.assertEqual(names, ["Alpha", "Beta", "Gamma"])  # sorted
+
+    def test_bulk_upsert_skips_missing_id(self):
+        count = upsert_groups_bulk(self.db_path, [{"name": "No ID"}])
+        self.assertEqual(count, 0)
+
+    def test_delete_group(self):
+        upsert_group(self.db_path, "abc123", "To Delete")
+        self.assertTrue(delete_group(self.db_path, "abc123"))
+        self.assertEqual(get_all_groups(self.db_path), [])
+
+    def test_delete_nonexistent(self):
+        self.assertFalse(delete_group(self.db_path, "nope"))
+
+    def test_get_all_groups_empty_db(self):
+        self.assertEqual(get_all_groups(self.db_path), [])
+
+    def test_get_all_groups_no_db(self):
+        self.db_path.unlink(missing_ok=True)
+        self.assertEqual(get_all_groups(self.db_path), [])
 
 
 if __name__ == "__main__":

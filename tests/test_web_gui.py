@@ -312,6 +312,10 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
         resp = await self.client.get("/api/groups")
         self.assertEqual(resp.status, 200)
 
+    async def test_refresh_groups_rejects_without_token(self):
+        resp = await self.client.post("/api/groups/refresh")
+        self.assertEqual(resp.status, 401)
+
     async def test_unprotected_invitations_works_without_token(self):
         resp = await self.client.get("/api/invitations")
         self.assertEqual(resp.status, 200)
@@ -1142,8 +1146,9 @@ class TestGroupsHandlerResponse(AioHTTPTestCase):
     async def get_application(self):
         return create_app(setup_mode=False)
 
+    @unittest.mock.patch("oden.web_handlers.group_handlers.get_all_groups", return_value=[])
     @unittest.mock.patch("oden.web_handlers.group_handlers.cfg")
-    async def test_groups_response_includes_whitelist(self, mock_cfg):
+    async def test_groups_response_includes_whitelist(self, mock_cfg, _mock_db):
         """groups_handler returns whitelistGroups from config."""
         mock_cfg.IGNORED_GROUPS = []
         mock_cfg.WHITELIST_GROUPS = ["Alpha", "Bravo"]
@@ -1169,6 +1174,31 @@ class TestGroupsHandlerResponse(AioHTTPTestCase):
         self.assertIn("Charlie", group_names)
 
         # Clean up
+        app_state.update_groups([])
+
+    @unittest.mock.patch("oden.web_handlers.group_handlers.cfg")
+    @unittest.mock.patch("oden.web_handlers.group_handlers.get_all_groups")
+    async def test_groups_merges_db_and_cache(self, mock_db_groups, mock_cfg):
+        """groups_handler merges DB groups with in-memory cache."""
+        mock_cfg.IGNORED_GROUPS = []
+        mock_cfg.WHITELIST_GROUPS = []
+        # DB has a group discovered from a message (no member info)
+        mock_db_groups.return_value = [
+            {"id": "db1", "name": "DB Only", "memberCount": 0, "isMember": True},
+        ]
+        from oden.app_state import get_app_state
+
+        app_state = get_app_state()
+        # Cache has a different group from listGroups RPC
+        app_state.update_groups([{"id": "rpc1", "name": "RPC Group", "isMember": True, "members": [1, 2]}])
+
+        resp = await self.client.get("/api/groups")
+        data = await resp.json()
+        names = {g["name"] for g in data["groups"]}
+        self.assertIn("DB Only", names)
+        self.assertIn("RPC Group", names)
+        self.assertEqual(len(data["groups"]), 2)
+
         app_state.update_groups([])
 
 

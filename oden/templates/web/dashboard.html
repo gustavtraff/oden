@@ -26,7 +26,10 @@
 
         <div class="grid">
             <div class="card full-width">
-                <h2>👥 Grupper</h2>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h2>👥 Grupper</h2>
+                    <button id="refresh-groups-btn" class="btn btn-secondary" onclick="refreshGroups()" title="Hämta grupper från signal-cli">Uppdatera</button>
+                </div>
                 <div id="groups-container" class="group-list">
                     <div class="empty-state">Laddar grupper...</div>
                 </div>

@@ -46,6 +46,35 @@ async function fetchGroups() {
     }
 }
 
+async function refreshGroups() {
+    const btn = document.getElementById('refresh-groups-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Uppdaterar...';
+    }
+    try {
+        const token = await getApiToken();
+        const response = await fetch('/api/groups/refresh', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+            showConfigMessage('Grupper uppdaterade från signal-cli.', 'success');
+        } else {
+            showConfigMessage(result.error || 'Kunde inte uppdatera grupper', 'error');
+        }
+    } catch (error) {
+        showConfigMessage('Nätverksfel: ' + error.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Uppdatera';
+        }
+        await fetchGroups();
+    }
+}
+
 async function toggleIgnoreGroup(groupName) {
     try {
         const token = await getApiToken();
