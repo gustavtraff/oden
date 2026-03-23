@@ -4,10 +4,8 @@ Attachment handling for Signal messages.
 Manages downloading, saving, and linking attachments from messages.
 """
 
-import asyncio
 import base64
 import datetime
-import json
 import logging
 import os
 from typing import Any
@@ -17,44 +15,23 @@ from oden.formatting import create_message_filename
 logger = logging.getLogger(__name__)
 
 
-async def _get_attachment_data(
-    attachment_id: str, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-) -> str | None:
+async def _get_attachment_data(attachment_id: str) -> str | None:
     """
     Makes a JSON-RPC call to signal-cli to get attachment data by ID.
     Returns base64 encoded data if successful, otherwise None.
     """
-    request_id = datetime.datetime.now().microsecond  # Simple unique ID for the request
     from oden import config as cfg
+    from oden.app_state import get_app_state
 
-    json_request = {
-        "jsonrpc": "2.0",
-        "method": "getAttachment",
-        "params": {"account": cfg.SIGNAL_NUMBER, "id": attachment_id},
-        "id": request_id,
-    }
-    request_str = json.dumps(json_request) + "\n"
-
-    try:
-        writer.write(request_str.encode("utf-8"))
-        await writer.drain()
-
-        # Read response line by line until our request_id is matched
-        response_line = await reader.readline()  # Assume response is on one line for now
-        if not response_line:
-            logger.error(f"No response for getAttachment request {request_id}")
-            return None
-
-        response = json.loads(response_line.decode("utf-8").strip())
-
-        if response.get("id") == request_id and "result" in response:
-            return response["result"].get("data")
-        else:
-            logger.error(f"Invalid or unmatched response for getAttachment: {response}")
-            return None
-    except Exception as e:
-        logger.error(f"ERROR calling getAttachment for ID {attachment_id}: {e}")
-        return None
+    response = await get_app_state().send_jsonrpc(
+        "getAttachment",
+        params={"account": cfg.SIGNAL_NUMBER, "id": attachment_id},
+        timeout=30.0,
+    )
+    if response and "result" in response:
+        return response["result"].get("data")
+    logger.error("Failed to get attachment data for ID %s: %s", attachment_id, response)
+    return None
 
 
 async def save_attachments(
@@ -63,8 +40,6 @@ async def save_attachments(
     dt: datetime.datetime,
     source_name: str | None,
     source_number: str | None,
-    reader: asyncio.StreamReader,
-    writer: asyncio.StreamWriter,
 ) -> list[str]:
     """Saves attachments to a subdirectory and returns a list of markdown links."""
     attachment_links = []
@@ -89,7 +64,7 @@ async def save_attachments(
 
         if not data and attachment_id:
             logger.info(f"Attempting to fetch attachment data for ID: {attachment_id}")
-            retrieved_data = await _get_attachment_data(attachment_id, reader, writer)
+            retrieved_data = await _get_attachment_data(attachment_id)
             if retrieved_data:
                 data = retrieved_data
                 logger.info(f"Successfully fetched data for attachment ID: {attachment_id}")

@@ -119,7 +119,7 @@ async def _get_attachment_data(
     """
     from attachment_handler import _get_attachment_data as get_attachment_data_impl
 
-    return await get_attachment_data_impl(attachment_id, reader, writer)
+    return await get_attachment_data_impl(attachment_id)
 
 
 async def _save_attachments(
@@ -135,7 +135,7 @@ async def _save_attachments(
     Wrapper function for backward compatibility.
     Use save_attachments from attachment_handler module instead.
     """
-    return await save_attachments(attachments, group_dir, dt, source_name, source_number, reader, writer)
+    return await save_attachments(attachments, group_dir, dt, source_name, source_number)
 
 
 async def _send_reply(group_id: str, message: str, writer: asyncio.StreamWriter) -> None:

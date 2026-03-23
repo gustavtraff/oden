@@ -108,10 +108,7 @@ class AppState:
             return
 
         if data.get("method") == "receive":
-            try:
-                self.notification_queue.put_nowait(data)
-            except asyncio.QueueFull:
-                logger.warning("Notification queue full, dropping receive notification")
+            self.notification_queue.put_nowait(data)
             return
 
         # Log fire-and-forget responses (e.g. updateProfile, send) at debug level

@@ -29,31 +29,63 @@ async function loadAccounts() {
             return;
         }
 
-        let html = '';
+        container.innerHTML = '';
         for (const acc of accounts) {
-            const num = escapeHtml(acc.number);
+            const num = acc.number;
             const isActive = acc.active;
 
-            html += '<div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border: 1px solid ' + (isActive ? '#2e7d32' : '#333') + '; border-radius: 8px; margin-bottom: 8px; background: ' + (isActive ? '#1a3a1a' : '#16213e') + ';">';
-            html += '<div>';
-            html += '<strong style="font-size: 1.05em;">' + num + '</strong>';
+            const row = document.createElement('div');
+            row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border: 1px solid ' + (isActive ? '#2e7d32' : '#333') + '; border-radius: 8px; margin-bottom: 8px; background: ' + (isActive ? '#1a3a1a' : '#16213e') + ';';
+
+            const info = document.createElement('div');
+            const strong = document.createElement('strong');
+            strong.style.fontSize = '1.05em';
+            strong.textContent = num;
+            info.appendChild(strong);
+
             if (isActive) {
-                html += ' <span style="color: #4caf50; font-size: 0.9em; margin-left: 8px;">● Aktivt konto</span>';
+                const badge = document.createElement('span');
+                badge.style.cssText = 'color: #4caf50; font-size: 0.9em; margin-left: 8px;';
+                badge.textContent = '● Aktivt konto';
+                info.appendChild(badge);
             }
-            html += '</div>';
-            html += '<div style="display: flex; gap: 8px;">';
+
+            const actions = document.createElement('div');
+            actions.style.cssText = 'display: flex; gap: 8px;';
 
             if (!isActive) {
-                html += '<button class="btn btn-primary" style="padding: 5px 12px; font-size: 0.85em;" onclick="activateAccount(\'' + num + '\')">Använd</button>';
-                html += '<button class="btn btn-secondary" style="padding: 5px 12px; font-size: 0.85em;" onclick="deleteAccount(\'' + num + '\')">Radera</button>';
-                html += '<button class="btn btn-secondary" style="padding: 5px 12px; font-size: 0.85em; color: #ff5252;" onclick="forceDeleteAccount(\'' + num + '\')">Tvinga radering</button>';
+                const useBtn = document.createElement('button');
+                useBtn.className = 'btn btn-primary';
+                useBtn.style.cssText = 'padding: 5px 12px; font-size: 0.85em;';
+                useBtn.textContent = 'Använd';
+                useBtn.addEventListener('click', () => activateAccount(num));
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn btn-secondary';
+                delBtn.style.cssText = 'padding: 5px 12px; font-size: 0.85em;';
+                delBtn.textContent = 'Radera';
+                delBtn.addEventListener('click', () => deleteAccount(num));
+
+                const forceBtn = document.createElement('button');
+                forceBtn.className = 'btn btn-secondary';
+                forceBtn.style.cssText = 'padding: 5px 12px; font-size: 0.85em; color: #ff5252;';
+                forceBtn.textContent = 'Tvinga radering';
+                forceBtn.addEventListener('click', () => forceDeleteAccount(num));
+
+                actions.appendChild(useBtn);
+                actions.appendChild(delBtn);
+                actions.appendChild(forceBtn);
             } else {
-                html += '<span style="color: #888; font-size: 0.85em; padding: 5px 0;">Kan inte raderas medan aktivt</span>';
+                const note = document.createElement('span');
+                note.style.cssText = 'color: #888; font-size: 0.85em; padding: 5px 0;';
+                note.textContent = 'Kan inte raderas medan aktivt';
+                actions.appendChild(note);
             }
 
-            html += '</div></div>';
+            row.appendChild(info);
+            row.appendChild(actions);
+            container.appendChild(row);
         }
-        container.innerHTML = html;
 
     } catch (error) {
         container.innerHTML = '<div class="empty-state" style="color: #ff5252;">Kunde inte ladda konton: ' + escapeHtml(error.message) + '</div>';

@@ -76,6 +76,7 @@ PROTECTED_ENDPOINTS = {
     "/api/invitations/accept",  # POST - accept group invitation
     "/api/invitations/decline",  # POST - decline group invitation
     "/api/config/export",  # GET - export config as INI
+    "/api/config/reset",  # DELETE - reset config to defaults
     "/api/setup/reset",  # DELETE - re-run setup
     "/api/accounts/link",  # POST - link new account
     "/api/accounts/link-cancel",  # POST - cancel link

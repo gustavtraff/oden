@@ -77,7 +77,6 @@ def _read_accounts_from_disk(active_number: str) -> list[dict]:
                         {
                             "number": number,
                             "active": number == active_number,
-                            "path": acc.get("path"),
                         }
                     )
         except (json.JSONDecodeError, OSError) as e:

@@ -332,6 +332,7 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
         )
         # Will return 503 (not connected) but not 401
         self.assertNotEqual(resp.status, 401)
+        self.assertNotEqual(resp.status, 404)
 
     # ------------------------------------------------------------------
     # /api/accounts/link-cancel (protected)
@@ -347,6 +348,7 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
             headers=self._auth_header(token),
         )
         self.assertNotEqual(resp.status, 401)
+        self.assertNotEqual(resp.status, 404)
 
     # ------------------------------------------------------------------
     # /api/accounts/activate (protected)
@@ -366,6 +368,7 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
             headers=self._auth_header(token),
         )
         self.assertNotEqual(resp.status, 401)
+        self.assertNotEqual(resp.status, 404)
 
     # ------------------------------------------------------------------
     # /api/accounts/{number} DELETE (prefix-protected)
@@ -381,6 +384,7 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
             headers=self._auth_header(token),
         )
         self.assertNotEqual(resp.status, 401)
+        self.assertNotEqual(resp.status, 404)
 
     # ------------------------------------------------------------------
     # /api/accounts/{number}/force DELETE (prefix-protected)
@@ -396,6 +400,7 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
             headers=self._auth_header(token),
         )
         self.assertNotEqual(resp.status, 401)
+        self.assertNotEqual(resp.status, 404)
 
     # ------------------------------------------------------------------
     # /api/accounts/link-status (prefix-protected)
@@ -411,6 +416,7 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
             headers=self._auth_header(token),
         )
         self.assertNotEqual(resp.status, 401)
+        self.assertNotEqual(resp.status, 404)
 
     # ------------------------------------------------------------------
     # /api/accounts (unprotected — GET list)
@@ -418,6 +424,22 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
     async def test_unprotected_accounts_list_works_without_token(self):
         resp = await self.client.get("/api/accounts")
         self.assertEqual(resp.status, 200)
+
+    # ------------------------------------------------------------------
+    # /api/config/reset (protected)
+    # ------------------------------------------------------------------
+    async def test_config_reset_rejects_without_token(self):
+        resp = await self.client.delete("/api/config/reset")
+        self.assertEqual(resp.status, 401)
+
+    async def test_config_reset_accepts_valid_token(self):
+        token = await self._get_valid_token()
+        resp = await self.client.delete(
+            "/api/config/reset",
+            headers=self._auth_header(token),
+        )
+        self.assertNotEqual(resp.status, 401)
+        self.assertNotEqual(resp.status, 404)
 
 
 class TestToggleGroupPersistence(AioHTTPTestCase):
