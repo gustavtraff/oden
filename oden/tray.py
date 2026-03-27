@@ -134,7 +134,6 @@ class OdenTray:
     def set_callbacks(
         self,
         on_quit: Callable[[], None] | None = None,
-        **_kwargs: Any,
     ) -> None:
         """Set callback functions for tray menu actions.
 
