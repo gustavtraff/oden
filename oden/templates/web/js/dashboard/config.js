@@ -127,27 +127,6 @@ async function rerunSetup() {
     }
 }
 
-async function exportConfig() {
-    try {
-        const response = await fetch('/api/config/export');
-        if (!response.ok) {
-            throw new Error('Kunde inte exportera config');
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'oden-config.ini';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        showConfigMessage('✓ Config nedladdad!', 'success');
-    } catch (error) {
-        showConfigMessage('Fel vid export: ' + error.message, 'error');
-    }
-}
-
 async function loadSignalConfig() {
     try {
         const token = await getApiToken();

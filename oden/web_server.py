@@ -26,8 +26,6 @@ from oden.web_handlers import (
     accounts_link_handler,
     accounts_link_status_handler,
     accounts_list_handler,
-    config_export_handler,
-    config_file_save_handler,
     config_handler,
     config_reset_handler,
     config_save_handler,
@@ -84,7 +82,7 @@ PROTECTED_ENDPOINTS = {
     "/api/invitations/accept",  # POST - accept group invitation
     "/api/invitations/decline",  # POST - decline group invitation
     "/api/groups/refresh",  # POST - re-fetch groups from signal-cli
-    "/api/config/export",  # GET - export config as INI
+
     "/api/config/reset",  # DELETE - reset config to defaults
     "/api/setup/reset",  # DELETE - re-run setup
     "/api/accounts/link",  # POST - link new account
@@ -217,9 +215,6 @@ def create_app(setup_mode: bool = False) -> web.Application:
     app.router.add_post("/api/setup/oden-home", setup_oden_home_handler)
     app.router.add_post("/api/setup/validate-path", setup_validate_path_handler)
     app.router.add_delete("/api/setup/reset", setup_reset_config_handler)
-    # INI import is only available during setup (migration step)
-    app.router.add_post("/api/config-file", config_file_save_handler)
-
     if setup_mode:
         # In setup mode, redirect root to setup
         async def redirect_to_setup(request):
@@ -242,7 +237,6 @@ def create_app(setup_mode: bool = False) -> web.Application:
         app.router.add_post("/api/toggle-ignore-group", toggle_ignore_group_handler)
         app.router.add_post("/api/toggle-whitelist-group", toggle_whitelist_group_handler)
         app.router.add_post("/api/config-save", config_save_handler)
-        app.router.add_get("/api/config/export", config_export_handler)
         app.router.add_delete("/api/config/reset", config_reset_handler)
         app.router.add_post("/api/shutdown", shutdown_handler)
 

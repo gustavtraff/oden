@@ -23,16 +23,13 @@ from oden.config_db import (
     DEFAULT_CONFIG,
     check_db_integrity,
     delete_db,
-    export_to_ini,
     get_all_config,
     init_db,
-    migrate_from_ini,
     save_all_config,
 )
 from oden.path_utils import (
     ensure_directory,
     normalize_path,
-    validate_ini_file_path,
     validate_path_within_home,
 )
 
@@ -43,9 +40,6 @@ ODEN_HOME: Path = DEFAULT_ODEN_HOME
 CONFIG_DB: Path = DEFAULT_ODEN_HOME / "config.db"
 DEFAULT_VAULT_PATH: Path = Path.home() / "oden-vault"
 SIGNAL_DATA_PATH: Path = DEFAULT_ODEN_HOME / "signal-data"
-
-# Legacy compatibility
-CONFIG_FILE: Path = DEFAULT_ODEN_HOME / "config.ini"
 
 
 def get_default_log_path() -> Path:
@@ -61,11 +55,10 @@ def get_default_log_path() -> Path:
 
 def _update_paths(oden_home: Path) -> None:
     """Update module-level paths based on ODEN_HOME."""
-    global ODEN_HOME, CONFIG_DB, SIGNAL_DATA_PATH, CONFIG_FILE
+    global ODEN_HOME, CONFIG_DB, SIGNAL_DATA_PATH
     ODEN_HOME = oden_home
     CONFIG_DB = oden_home / "config.db"
     SIGNAL_DATA_PATH = oden_home / "signal-data"
-    CONFIG_FILE = oden_home / "config.ini"  # Legacy
 
 
 def ensure_oden_directories() -> None:
@@ -265,11 +258,6 @@ def reload_config() -> dict:
     return app_config
 
 
-def export_config_to_ini() -> str:
-    """Export current configuration to INI format string."""
-    return export_to_ini(CONFIG_DB)
-
-
 def reset_config() -> bool:
     """
     Reset configuration by deleting the database and clearing the pointer file.
@@ -304,16 +292,14 @@ def soft_reset_config() -> bool:
     return clear_oden_home_pointer()
 
 
-def setup_oden_home(path: Path, ini_path: Path | None = None) -> tuple[bool, str | None]:
+def setup_oden_home(path: Path) -> tuple[bool, str | None]:
     """
     Set up the Oden home directory.
 
-    Creates the directory, initializes the database, and optionally migrates
-    from an existing INI file.
+    Creates the directory, initializes the database.
 
     Args:
         path: Path to use as Oden home directory
-        ini_path: Optional path to config.ini to migrate from
 
     Returns:
         (True, None) on success
@@ -348,18 +334,8 @@ def setup_oden_home(path: Path, ini_path: Path | None = None) -> tuple[bool, str
     if not set_oden_home_path(path):
         return False, "Kunde inte spara konfigurationssökväg"
 
-    # Migrate from INI if requested
     db_path = path / "config.db"
-    if ini_path:
-        # Validate INI file path using centralized validation
-        safe_ini_path, ini_error = validate_ini_file_path(ini_path, must_be_within=path)
-        if ini_error:
-            return False, ini_error
-
-        success, migrate_error = migrate_from_ini(safe_ini_path, db_path)
-        if not success:
-            return False, migrate_error
-    elif db_path.exists():
+    if db_path.exists():
         # Existing database found — preserve it, only run schema migrations
         existing_config = get_all_config(db_path)
         existing_number = existing_config.get("signal_number", "")

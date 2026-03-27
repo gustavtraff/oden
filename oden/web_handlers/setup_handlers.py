@@ -3,7 +3,7 @@ Setup wizard handlers for Oden web GUI.
 
 These handlers manage the first-run configuration wizard,
 including Signal account linking and registration, and
-config directory selection with optional INI migration.
+config directory selection.
 """
 
 import asyncio
@@ -39,79 +39,9 @@ from oden.path_utils import (
     is_filesystem_root,
     is_within_directory,
     normalize_path,
-    validate_ini_file_path,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _merge_ini_into_db(db_path: Path, ini_path: Path) -> bool:
-    """Merge config.ini values into config.db for keys that still have defaults.
-
-    During recovery, config.db may have been created with default/placeholder
-    values while config.ini (from an earlier Oden version) contains the user's
-    real settings. This function reads both sources and updates config.db
-    where it still holds DEFAULT_CONFIG values.
-
-    Returns True if any values were merged, False otherwise.
-    """
-    if not db_path.exists() or not ini_path.exists():
-        return False
-
-    try:
-        import configparser
-        import os
-
-        ini = configparser.RawConfigParser()
-        ini.read(ini_path)
-
-        # Parse INI into a flat dict matching config_db keys
-        ini_values: dict = {}
-        if ini.has_section("Vault"):
-            v = ini.get("Vault", "path", fallback=None)
-            if v:
-                ini_values["vault_path"] = os.path.expanduser(v)
-        if ini.has_section("Signal"):
-            v = ini.get("Signal", "number", fallback=None)
-            if v:
-                ini_values["signal_number"] = v
-            v = ini.get("Signal", "display_name", fallback=None)
-            if v:
-                ini_values["display_name"] = v
-        if ini.has_section("Settings"):
-            wl = ini.get("Settings", "whitelist_groups", fallback=None)
-            if wl:
-                ini_values["whitelist_groups"] = [g.strip() for g in wl.split(",") if g.strip()]
-            ig = ini.get("Settings", "ignored_groups", fallback=None)
-            if ig:
-                ini_values["ignored_groups"] = [g.strip() for g in ig.split(",") if g.strip()]
-
-        if not ini_values:
-            return False
-
-        current = get_all_config(db_path)
-        updates: dict = {}
-        for key, ini_value in ini_values.items():
-            db_value = current.get(key)
-            default_value = DEFAULT_CONFIG.get(key)
-            # Only merge if DB still has the default and INI has something different
-            if db_value == default_value and ini_value != default_value:
-                updates[key] = ini_value
-
-        if updates:
-            merged = {**current, **updates}
-            save_all_config(db_path, merged)
-            logger.info(
-                "Auto-merged %d value(s) from config.ini into config.db: %s",
-                len(updates),
-                list(updates.keys()),
-            )
-            return True
-
-        return False
-    except Exception as e:
-        logger.warning("Could not auto-merge config.ini: %s", e)
-        return False
 
 
 # Global state for the linking process
@@ -164,10 +94,6 @@ async def setup_status_handler(request: web.Request) -> web.Response:
                     "Recovery candidate: pointer file missing but config.db exists at %s",
                     DEFAULT_ODEN_HOME,
                 )
-                # Auto-merge config.ini values for keys still at defaults
-                candidate_ini = DEFAULT_ODEN_HOME / "config.ini"
-                if candidate_ini.exists():
-                    _merge_ini_into_db(candidate_db, candidate_ini)
 
                 # Read saved config so the UI can pre-populate fields
                 try:
@@ -186,28 +112,6 @@ async def setup_status_handler(request: web.Request) -> web.Response:
                 except Exception as e:
                     logger.warning("Could not read saved config for recovery: %s", e)
 
-    # Check for existing INI file - first in default location, then in bundle location
-    default_ini_path = DEFAULT_ODEN_HOME / "config.ini"
-    bundle_ini_path = get_bundle_path() / "config.ini"
-
-    existing_ini_path = None
-    if default_ini_path.exists():
-        existing_ini_path = default_ini_path
-        logger.debug(f"Found config.ini at default location: {default_ini_path}")
-    elif bundle_ini_path.exists():
-        existing_ini_path = bundle_ini_path
-        logger.debug(f"Found config.ini at bundle location: {bundle_ini_path}")
-
-    has_existing_ini = existing_ini_path is not None
-
-    # Read INI content for migration preview
-    existing_ini_content = None
-    if has_existing_ini:
-        try:
-            existing_ini_content = existing_ini_path.read_text(encoding="utf-8")
-        except Exception as e:
-            logger.warning(f"Could not read INI file for preview: {e}")
-
     if _linker is None:
         return web.json_response(
             {
@@ -217,9 +121,6 @@ async def setup_status_handler(request: web.Request) -> web.Response:
                 "oden_home": str(current_oden_home) if current_oden_home else str(DEFAULT_ODEN_HOME),
                 "default_oden_home": str(DEFAULT_ODEN_HOME),
                 "default_vault": str(DEFAULT_VAULT_PATH),
-                "has_existing_ini": has_existing_ini,
-                "existing_ini_path": str(existing_ini_path) if has_existing_ini else None,
-                "existing_ini_content": existing_ini_content,
                 "existing_accounts": existing_accounts,
                 "recovery_candidate": recovery_candidate,
                 "recovery_config": recovery_config,
@@ -337,42 +238,18 @@ async def setup_cancel_link_handler(request: web.Request) -> web.Response:
 
 
 async def setup_oden_home_handler(request: web.Request) -> web.Response:
-    """Set up the Oden home directory with optional INI migration."""
+    """Set up the Oden home directory."""
     try:
         data = await request.json()
         oden_home_path = data.get("oden_home", str(DEFAULT_ODEN_HOME))
-        ini_path_value = data.get("ini_path")  # Optional path to migrate from
-
-        ini_path_obj: Path | None = None
-        if ini_path_value:
-            # Try validating INI file path - first within home dir, then within bundle
-            ini_path_obj, ini_error = validate_ini_file_path(ini_path_value)
-            if ini_error:
-                # If home validation failed, try bundle location
-                bundle_path = get_bundle_path()
-                ini_path_obj, bundle_error = validate_ini_file_path(ini_path_value, must_be_within=bundle_path)
-                if bundle_error:
-                    # Both failed - return the original error
-                    return web.json_response(
-                        {"success": False, "error": ini_error},
-                        status=400,
-                    )
-                logger.info(f"Using config.ini from bundle location: {ini_path_obj}")
 
         # Validate and set up; primary path validation is handled inside setup_oden_home
-        success, error = setup_oden_home(Path(oden_home_path), ini_path_obj)
+        success, error = setup_oden_home(Path(oden_home_path))
 
         if success:
             logger.info("Oden home directory set to: %s", oden_home_path)
 
-            # Auto-merge config.ini values for keys that still have defaults.
-            # This handles the case where config.db was created with placeholder
-            # values and config.ini has the user's real settings from an earlier
-            # version of Oden.
             db_path = Path(oden_home_path) / "config.db"
-            ini_path_auto = Path(oden_home_path) / "config.ini"
-            if ini_path_obj is None and db_path.exists() and ini_path_auto.exists():
-                _merge_ini_into_db(db_path, ini_path_auto)
 
             # Check if configuration is now fully complete (e.g. during recovery)
             fully_configured, _config_error = is_configured()
@@ -406,7 +283,7 @@ async def setup_oden_home_handler(request: web.Request) -> web.Response:
                     "success": True,
                     "message": "Konfigurationskatalog skapad",
                     "oden_home": oden_home_path,
-                    "migrated_from_ini": ini_path_obj is not None,
+
                     "fully_configured": fully_configured,
                     "saved_config": saved_config,
                 }
@@ -470,7 +347,6 @@ async def setup_validate_path_handler(request: web.Request) -> web.Response:
         if is_valid:
             # Check if there's already a config.db
             db_exists = (resolved_path / "config.db").exists()
-            ini_exists = (resolved_path / "config.ini").exists()
 
             return web.json_response(
                 {
@@ -478,7 +354,6 @@ async def setup_validate_path_handler(request: web.Request) -> web.Response:
                     "path": str(resolved_path),
                     "exists": resolved_path.exists(),
                     "has_config_db": db_exists,
-                    "has_config_ini": ini_exists,
                 }
             )
         else:

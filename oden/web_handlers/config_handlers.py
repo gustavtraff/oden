@@ -11,7 +11,6 @@ from oden import config as cfg
 from oden.app_state import get_app_state
 from oden.config import (
     DEFAULT_VAULT_PATH,
-    export_config_to_ini,
     get_config,
     reload_config,
     reset_config,
@@ -55,85 +54,6 @@ async def config_handler(request: web.Request) -> web.Response:
         "config_db_path": str(cfg.CONFIG_DB),
     }
     return web.json_response(config_data)
-
-
-async def config_file_get_handler(request: web.Request) -> web.Response:
-    """Return the configuration as INI format (for export/display)."""
-    try:
-        ini_content = export_config_to_ini()
-        return web.json_response({"content": ini_content})
-    except Exception as e:
-        logger.error(f"Error exporting config to INI: {e}")
-        return web.json_response({"content": "", "error": str(e)}, status=500)
-
-
-async def config_export_handler(request: web.Request) -> web.Response:
-    """Export configuration as downloadable INI file."""
-    try:
-        ini_content = export_config_to_ini()
-        return web.Response(
-            text=ini_content,
-            content_type="text/plain",
-            headers={"Content-Disposition": "attachment; filename=oden-config.ini"},
-        )
-    except Exception as e:
-        logger.error(f"Error exporting config: {e}")
-        return web.json_response({"error": str(e)}, status=500)
-
-
-@handle_errors("import config")
-@parse_json_body
-async def config_file_save_handler(request: web.Request) -> web.Response:
-    """Save configuration from INI format (for import)."""
-    import configparser
-
-    from oden.config_db import migrate_from_ini
-
-    data = request["json_body"]
-    content = data.get("content", "")
-    do_reload = data.get("reload", False)
-
-    if not content.strip():
-        return web.json_response({"success": False, "error": "Config kan inte vara tom"}, status=400)
-
-    # Validate by trying to parse it
-    config = configparser.RawConfigParser()
-    try:
-        config.read_string(content)
-    except configparser.Error as e:
-        return web.json_response({"success": False, "error": f"Ogiltig INI-syntax: {e}"}, status=400)
-
-    # Check required sections
-    if not config.has_section("Vault") or not config.has_section("Signal"):
-        return web.json_response(
-            {"success": False, "error": "Config måste ha [Vault] och [Signal] sektioner"},
-            status=400,
-        )
-
-    # Write to temp file and migrate
-    import tempfile
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".ini", delete=False) as f:
-        f.write(content)
-        temp_path = f.name
-
-    try:
-        from pathlib import Path
-
-        success, error = migrate_from_ini(Path(temp_path), cfg.CONFIG_DB)
-        if not success:
-            return web.json_response({"success": False, "error": error}, status=400)
-    finally:
-        Path(temp_path).unlink(missing_ok=True)
-
-    logger.info(f"Config imported from INI via web GUI (reload={do_reload})")
-
-    # Trigger live reload if requested
-    if do_reload:
-        reload_config()
-        logger.info("Configuration reloaded")
-
-    return web.json_response({"success": True, "message": "Config importerad"})
 
 
 @handle_errors("save config")

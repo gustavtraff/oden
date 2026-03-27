@@ -9,7 +9,7 @@ let _groupsCache = [];
 
 async function fetchGroups() {
     try {
-        const token = getApiToken();
+        const token = await getApiToken();
         const response = await fetch('/api/groups', {
             headers: token ? {'Authorization': 'Bearer ' + token} : {}
         });

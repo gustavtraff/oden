@@ -74,15 +74,6 @@ class TestWebAPIEndpoints(AioHTTPTestCase):
         # so we only check && which should never appear as &amp;&amp;)
         self.assertNotIn("&amp;&amp;", text)
 
-    async def test_api_config_export_returns_text(self):
-        resp = await self.client.get("/api/token")
-        token_data = await resp.json()
-        resp = await self.client.get(
-            "/api/config/export",
-            headers={"Authorization": f"Bearer {token_data['token']}"},
-        )
-        self.assertEqual(resp.status, 200)
-
 
 class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
     """Test that all protected endpoints reject requests without a valid token
@@ -131,17 +122,6 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
         )
         self.assertNotEqual(resp.status, 401)
 
-    # ------------------------------------------------------------------
-    # /api/config/export (requires auth)
-    # ------------------------------------------------------------------
-    async def test_config_export_rejects_without_token(self):
-        resp = await self.client.get("/api/config/export")
-        self.assertEqual(resp.status, 401)
-
-    async def test_config_export_accepts_valid_token(self):
-        token = await self._get_valid_token()
-        resp = await self.client.get("/api/config/export", headers=self._auth_header(token))
-        self.assertNotEqual(resp.status, 401)
 
     # ------------------------------------------------------------------
     # /api/shutdown

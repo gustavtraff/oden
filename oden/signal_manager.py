@@ -98,7 +98,7 @@ def find_signal_cli_executable() -> str:
             return os.path.abspath(bundled_path)
 
     raise FileNotFoundError(
-        "signal-cli executable not found. Please install it, place it in the project directory, or configure 'signal_cli_path' in config.ini."
+        "signal-cli executable not found. Please install it, place it in the project directory, or configure 'signal_cli_path' in the web GUI."
     )
 
 

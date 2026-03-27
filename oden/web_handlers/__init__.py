@@ -16,9 +16,6 @@ from oden.web_handlers.account_handlers import (
     accounts_list_handler,
 )
 from oden.web_handlers.config_handlers import (
-    config_export_handler,
-    config_file_get_handler,
-    config_file_save_handler,
     config_handler,
     config_reset_handler,
     config_save_handler,
@@ -74,10 +71,7 @@ from oden.web_handlers.template_handlers import (
 __all__ = [
     # Config handlers
     "config_handler",
-    "config_file_get_handler",
-    "config_file_save_handler",
     "config_save_handler",
-    "config_export_handler",
     "config_reset_handler",
     "signal_config_handler",
     "signal_config_save_handler",

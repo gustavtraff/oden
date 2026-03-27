@@ -147,49 +147,6 @@ def validate_path_within_directory(
     return resolved, None
 
 
-def validate_ini_file_path(
-    path: str | Path,
-    must_be_within: Path | None = None,
-) -> tuple[Path | None, str | None]:
-    """Validate a path points to a valid INI file.
-
-    Args:
-        path: Path to INI file.
-        must_be_within: If set, INI file must be within this directory.
-
-    Returns:
-        (normalized_path, None) on success.
-        (None, error_message) on failure.
-    """
-    try:
-        resolved = normalize_path(path)
-    except (OSError, RuntimeError, ValueError) as e:
-        return None, f"Ogiltig sökväg för INI-fil: {e}"
-
-    # Determine parent constraint: either the provided directory or user home by default
-    try:
-        parent = normalize_path(must_be_within) if must_be_within is not None else Path.home().resolve()
-    except (OSError, RuntimeError, ValueError):
-        return None, "Ogiltig föräldrasökväg"
-
-    # Enforce that the INI file is within the allowed parent directory
-    if not is_within_directory(resolved, parent):
-        return None, f"INI-fil måste vara under {parent}"
-
-    # Must be named config.ini
-    if resolved.name != "config.ini":
-        return None, f"INI-fil måste heta config.ini, inte {resolved.name}"
-
-    # Must exist and be a file
-    if not resolved.exists():
-        return None, f"INI-fil hittades inte: {resolved}"
-
-    if not resolved.is_file():
-        return None, f"Sökvägen är inte en fil: {resolved}"
-
-    return resolved, None
-
-
 def sanitize_filename(filename: str, fallback: str = "unnamed") -> str:
     """Sanitize a filename to prevent path traversal and invalid characters.
 

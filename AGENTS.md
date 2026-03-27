@@ -26,8 +26,8 @@ Oden is a Signal-to-Obsidian bridge that receives Signal messages via `signal-cl
 
 - **s7_watcher.py**: Entry point. Manages signal-cli subprocess, TCP connection, startup tasks, web GUI, tray icon. Reader loop runs as background task (`_reader_loop`) to avoid deadlocking startup RPC calls
 - **processing.py**: Core logic. Parses messages, handles commands (`#help`), append mode (`++`), file I/O
-- **config.py**: Loads config from `config_db`, exports constants like `VAULT_PATH`, `SIGNAL_NUMBER`, `TIMEZONE`. Legacy INI import/export supported
-- **config_db.py**: SQLite config database (`config.db`). Key-value store with type-aware serialization, INI migration, integrity checking
+- **config.py**: Loads config from `config_db`, exports constants like `VAULT_PATH`, `SIGNAL_NUMBER`, `TIMEZONE`
+- **config_db.py**: SQLite config database (`config.db`). Key-value store with type-aware serialization, integrity checking
 - **app_state.py**: Singleton application state — holds references to writer, signal-cli process, web runner, tray icon. Central JSON-RPC dispatcher: `send_jsonrpc()` registers Futures by request id, `dispatch_line()` routes incoming lines (RPC responses → Futures, notifications → queue)
 - **tray.py**: System tray icon via pystray. Start/stop toggle, open web GUI, quit. Blocks main thread on macOS (NSApplication)
 - **formatting.py**: Filename sanitization, path generation, display formatting
@@ -119,7 +119,6 @@ A web interface runs automatically at `http://127.0.0.1:8080` (localhost only, o
 - Template editor with split-screen preview
 - Signal accounts tab (list, link via QR, activate, delete, force-delete)
 - Shutdown button
-- INI export/import
 
 **Security:** Token-based auth for sensitive endpoints (generated per session). Localhost only.
 
