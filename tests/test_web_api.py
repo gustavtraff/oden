@@ -122,7 +122,6 @@ class TestProtectedEndpointsRequireAuth(AioHTTPTestCase):
         )
         self.assertNotEqual(resp.status, 401)
 
-
     # ------------------------------------------------------------------
     # /api/shutdown
     # ------------------------------------------------------------------

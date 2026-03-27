@@ -283,7 +283,6 @@ async def setup_oden_home_handler(request: web.Request) -> web.Response:
                     "success": True,
                     "message": "Konfigurationskatalog skapad",
                     "oden_home": oden_home_path,
-
                     "fully_configured": fully_configured,
                     "saved_config": saved_config,
                 }

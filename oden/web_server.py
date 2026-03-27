@@ -82,7 +82,6 @@ PROTECTED_ENDPOINTS = {
     "/api/invitations/accept",  # POST - accept group invitation
     "/api/invitations/decline",  # POST - decline group invitation
     "/api/groups/refresh",  # POST - re-fetch groups from signal-cli
-
     "/api/config/reset",  # DELETE - reset config to defaults
     "/api/setup/reset",  # DELETE - re-run setup
     "/api/accounts/link",  # POST - link new account
