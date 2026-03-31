@@ -7,15 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-03-31
+
+### 🔧 Oden 2.1 — Gruppadministration, kontakthantering och modulär kodbas
+
+Full kontroll över Signal-grupper och kontakter direkt från webb-GUI. Ny central
+JSON-RPC-dispatcher, modulär kodstruktur och slopad config.ini till förmån för
+enbart SQLite-baserad konfiguration.
+
 ### Added
 
 - **Gruppadministration**: Redigera grupper direkt från webb-GUI — byt namn, hantera medlemmar (lägg till/ta bort), ändra behörigheter och grupplänk via signal-cli:s `updateGroup` RPC. Ny endpoint: `POST /api/groups/update`
 - **Kontakthantering**: Redigera kontakter från webb-GUI — förnamn, efternamn, smeknamn, anteckning och försvinnande-timer via signal-cli:s `updateContact` RPC. Ny endpoint: `PUT /api/contacts/{number}`
+- **Kontakter, enheter och signal-config**: Nya flikar i GUI för att hantera kontakter, enheter och signal-konfiguration (features #3, #4, #5)
 - **Multi-account-stöd**: signal-cli körs i multi-account daemon-läge (utan `-u`-flagga). Alla JSON-RPC-anrop inkluderar `account`-parameter
 - **Signal-konton-flik**: Ny flik i Web GUI för kontohantering — lista, länka via QR, aktivera, radera och tvångsradera signal-cli-konton
 - **Konto-API**: Nya endpoints: `GET /api/accounts`, `POST /api/accounts/link`, `POST /api/accounts/link-cancel`, `GET /api/accounts/link-status`, `POST /api/accounts/activate`, `DELETE /api/accounts/{number}`, `DELETE /api/accounts/{number}/force`
 - **Central JSON-RPC-dispatcher**: `app_state.send_jsonrpc()` registrerar Futures, `dispatch_line()` dirigerar RPC-svar och notifikationer. Bakgrunds-reader-loop (`_reader_loop`) körs som asyncio-task
-- **Auth-tester för kontokonton**: 13 nya tester för kontoendpoints + 2 tester för `/api/config/reset`
+- **Auto-reaktion och läskvitton**: Automatisk emoji-reaktion och läskvitto på sparade meddelanden, med konsoliderad inställning i GUI
+- **Grupper i SQLite**: Grupper sparas nu i SQLite-databas för tillförlitlig population istället för enbart signal-cli-anrop
+- **Pointer file auto-recovery**: Automatisk återställning av pointer-fil och auto-merge av config.ini-värden till config.db vid recovery
+- **Oden-logotyp i GUI**: Ny logotyp i dashboard och tray, centraliserad som data-URI
+- **ODEN_VERSION-stöd**: Install-skriptet (`install_mac.sh`) stöder nu specifik version eller snapshot-installation
+- **Fler tester**: 13 nya tester för kontoendpoints + 2 tester för `/api/config/reset`
 
 ### Fixed
 
@@ -28,12 +42,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Död kod**: Borttagen `QueueFull`-hantering i `dispatch_line()` (kön är obegränsad)
 - **pollLinkStatus auth**: Lade till auth-header som saknades (resulterade alltid i 401)
 - **Gruppcache**: Rensas vid kontobyte så att rätt konto-grupper visas
+- **Telefonnummer i loggar**: Telefonnummer redigeras nu bort från loggutskrifter
+- **Auth-token retry**: Korrigerad retry-logik vid 401-svar och inaktuella config-importer
+- **Config-formulär vid kontobyte**: Formuläret uppdateras automatiskt efter kontoaktivering
+- **Logg-scroll**: Scroll-position bevaras vid uppdatering av loggvyn
+- **Config.db vid recovery**: Databasen bevaras nu korrekt under recovery-flödet
+- **Stale CONFIG_DB-bindningar**: Import-time-bindningar i web handlers ersatta med live-anrop
+- **Race condition vid uppstart**: Visar anslutningsstatus medan signal-cli startar
+- **Setup-formulär vid återställning**: Formulärfält populeras korrekt vid config-restore
+- **Loggspam**: Setup-väntanledning loggas en gång istället för vid varje poll
 
 ### Changed
 
+- **config.ini borttagen**: All konfiguration sker nu via SQLite (`config_db`). INI-stöd helt borttaget
+- **Auto-save config**: Konfigurationsändringar sparas automatiskt — dirty tracking och spara-knappar borttagna
 - **signal-cli daemon-läge**: Startas utan `-u`-flagga för multi-account-stöd
 - **`attachment_handler`**: Refaktorerad till `app_state.send_jsonrpc()` istället för direkt TCP-läsning
 - **Meddelandefiltrering**: Receive-loopen filtrerar meddelanden per aktivt konto
+- **Modulär kodbas**: Stora filer uppdelade — `signal_manager` → `signal_linker` + `signal_registrar`, `config_db` → `responses_db` + `groups_db`, `s7_watcher` → `signal_listener` + `log_utils`, `test_web_gui` → `test_web_api`/`crud`/`config`/`screenshots`
+- **GUI-refaktorering**: Handler-dekoratorer, CSS-variabler och Jinja2 template-includes för bättre underhåll
+- **Token-auth borttagen**: Förenklad autentisering med pointer file auto-recovery istället
+- **Dokumentation**: Uppdaterad för att matcha aktuell kodimplementation, varning om API-exponering vid `WEB_HOST=0.0.0.0`
+- **Beroenden**: Uppgraderade GitHub Actions (docker/build-push-action v6 → v7 m.fl.)
 
 ## [2.0.0] - 2026-03-23
 
