@@ -26,7 +26,7 @@ enbart SQLite-baserad konfiguration.
 - **Central JSON-RPC-dispatcher**: `app_state.send_jsonrpc()` registrerar Futures, `dispatch_line()` dirigerar RPC-svar och notifikationer. Bakgrunds-reader-loop (`_reader_loop`) körs som asyncio-task
 - **Auto-reaktion och läskvitton**: Automatisk emoji-reaktion och läskvitto på sparade meddelanden, med konsoliderad inställning i GUI
 - **Grupper i SQLite**: Grupper sparas nu i SQLite-databas för tillförlitlig population istället för enbart signal-cli-anrop
-- **Pointer file auto-recovery**: Automatisk återställning av pointer-fil och auto-merge av config.ini-värden till config.db vid recovery
+- **Pointer file auto-recovery**: Automatisk återställning av pointer-fil vid recovery
 - **Oden-logotyp i GUI**: Ny logotyp i dashboard och tray, centraliserad som data-URI
 - **ODEN_VERSION-stöd**: Install-skriptet (`install_mac.sh`) stöder nu specifik version eller snapshot-installation
 - **Fler tester**: 13 nya tester för kontoendpoints + 2 tester för `/api/config/reset`
