@@ -251,17 +251,25 @@ async def run_setup_server(port: int = 8080) -> bool:
     Returns:
         True if setup completed successfully, False otherwise.
     """
-    from oden.config import is_configured
+    from oden.config import is_configured, validate_signal_number
 
     runner = await start_web_server(port, setup_mode=True)
     try:
         # Poll for configuration completion
         configured, _error = is_configured()
+        if configured:
+            _valid, _verr = validate_signal_number()
+            if not _valid:
+                configured, _error = False, _verr
         if not configured:
             logger.info("Waiting for setup to complete (reason: %s)...", _error)
         while not configured:
             await asyncio.sleep(1.0)
             configured, _error = is_configured()
+            if configured:
+                _valid, _verr = validate_signal_number()
+                if not _valid:
+                    configured, _error = False, _verr
         logger.info("Setup completed, configuration saved.")
         # Wait so the browser can show success message and redirect
         await asyncio.sleep(5.0)

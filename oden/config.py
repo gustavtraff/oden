@@ -81,6 +81,7 @@ def is_configured() -> tuple[bool, str | None]:
             - "corrupt": Database is corrupted
             - "invalid_schema": Database has wrong schema
             - "no_signal_number": Signal number not configured
+            - "invalid_account": Configured number not found in signal-cli
     """
     # Check if pointer file exists and points to valid directory
     oden_home = get_oden_home_path()
@@ -110,6 +111,39 @@ def is_configured() -> tuple[bool, str | None]:
         return False, "no_signal_number"
 
     logger.debug("Configuration check: OK (signal_number=%s)", number)
+    return True, None
+
+
+def validate_signal_number() -> tuple[bool, str | None]:
+    """Validate that the configured signal_number exists in signal-cli accounts.
+
+    This is separate from is_configured() to avoid circular imports at
+    module load time (signal_manager imports config).
+
+    Returns:
+        (True, None) if valid or no accounts found to check against.
+        (False, "invalid_account") if the number is not among signal-cli accounts.
+    """
+    config = get_all_config(CONFIG_DB)
+    number = config.get("signal_number", "")
+    if not number or number == "+46XXXXXXXXX":
+        return False, "no_signal_number"
+
+    from oden.signal_manager import get_existing_accounts
+
+    try:
+        accounts = get_existing_accounts()
+        account_numbers = [a["number"] for a in accounts]
+        if accounts and number not in account_numbers:
+            logger.warning(
+                "Signal number validation: %s not found among signal-cli accounts %s",
+                number,
+                account_numbers,
+            )
+            return False, "invalid_account"
+    except Exception as e:
+        logger.debug("Could not validate signal_number against accounts: %s", e)
+
     return True, None
 
 

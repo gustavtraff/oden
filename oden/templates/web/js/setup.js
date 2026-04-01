@@ -19,6 +19,15 @@ fetch('/api/setup/status')
             }
             showRecoveryStep();
         }
+
+        // If configured but the number is invalid (not in signal-cli),
+        // skip to step 2 so the user can select a valid account.
+        if (data.config_error === 'invalid_account') {
+            if (data.existing_accounts && data.existing_accounts.length > 0) {
+                existingAccounts = data.existing_accounts;
+            }
+            goToStep(2);
+        }
     });
 
 function hideAllStep2Sections() {
@@ -322,6 +331,15 @@ function useManualNumber() {
     if (!number || !number.startsWith('+')) {
         alert('Ange ett giltigt telefonnummer (t.ex. +46701234567)');
         return;
+    }
+    // Validate against known signal-cli accounts
+    if (existingAccounts.length > 0) {
+        const found = existingAccounts.some(a => a.number === number);
+        if (!found) {
+            const knownNumbers = existingAccounts.map(a => a.number).join(', ');
+            alert('Numret ' + number + ' finns inte bland signal-cli:s konton.\nTillgängliga konton: ' + knownNumbers);
+            return;
+        }
     }
     linkedNumber = number;
     goToStep(3);

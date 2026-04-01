@@ -78,6 +78,15 @@ async def setup_status_handler(request: web.Request) -> web.Response:
     # Check configuration status
     configured, config_error = is_configured()
 
+    # If is_configured passes, also validate the signal number against accounts
+    if configured:
+        from oden.config import validate_signal_number
+
+        _valid, _verr = validate_signal_number()
+        if not _valid:
+            configured = False
+            config_error = _verr
+
     # Get current oden_home from pointer file
     current_oden_home = get_oden_home_path()
 
@@ -111,6 +120,16 @@ async def setup_status_handler(request: web.Request) -> web.Response:
                     )
                 except Exception as e:
                     logger.warning("Could not read saved config for recovery: %s", e)
+
+    # When the configured number doesn't match any signal-cli account,
+    # eagerly load accounts so the UI can show a selection immediately.
+    if config_error == "invalid_account" and not existing_accounts:
+        from oden.signal_manager import get_existing_accounts
+
+        try:
+            existing_accounts = get_existing_accounts()
+        except Exception as e:
+            logger.debug("Could not load accounts for invalid_account flow: %s", e)
 
     if _linker is None:
         return web.json_response(
@@ -416,6 +435,29 @@ async def setup_save_config_handler(request: web.Request) -> web.Response:
                 },
                 status=400,
             )
+
+        # Validate that the number exists in signal-cli accounts
+        from oden.signal_manager import get_existing_accounts
+
+        try:
+            accounts = get_existing_accounts()
+            account_numbers = [a["number"] for a in accounts]
+            if accounts and signal_number not in account_numbers:
+                logger.warning(
+                    "Setup save rejected: %s not in signal-cli accounts %s",
+                    signal_number,
+                    account_numbers,
+                )
+                return web.json_response(
+                    {
+                        "success": False,
+                        "error": f"Numret {signal_number} finns inte bland signal-cli:s konton. "
+                        f"Tillgängliga konton: {', '.join(account_numbers)}",
+                    },
+                    status=400,
+                )
+        except Exception as e:
+            logger.debug("Could not validate signal_number against accounts: %s", e)
 
         # Expand and validate vault path
         vault_path = str(Path(vault_path).expanduser())

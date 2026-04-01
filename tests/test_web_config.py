@@ -219,12 +219,13 @@ class TestSetupSaveConfigPreservesExisting(AioHTTPTestCase):
     async def get_application(self):
         return create_app(setup_mode=True)
 
+    @unittest.mock.patch("oden.signal_manager.get_existing_accounts", return_value=[])
     @unittest.mock.patch("oden.config.set_oden_home_path", return_value=True)
     @unittest.mock.patch("oden.config.validate_oden_home", return_value=(True, None))
     @unittest.mock.patch("oden.config.validate_path_within_home")
     @unittest.mock.patch("oden.web_handlers.setup_handlers.get_oden_home_path")
     async def test_save_config_preserves_custom_values(
-        self, mock_get_home, mock_validate_path, mock_validate_home, mock_set_pointer
+        self, mock_get_home, mock_validate_path, mock_validate_home, mock_set_pointer, mock_accounts
     ):
         """Custom config values must survive the setup save-config handler."""
         import tempfile
@@ -275,12 +276,13 @@ class TestSetupSaveConfigPreservesExisting(AioHTTPTestCase):
             self.assertEqual(result["startup_message"], "none")
             self.assertEqual(result["timezone"], "UTC")
 
+    @unittest.mock.patch("oden.signal_manager.get_existing_accounts", return_value=[])
     @unittest.mock.patch("oden.config.set_oden_home_path", return_value=True)
     @unittest.mock.patch("oden.config.validate_oden_home", return_value=(True, None))
     @unittest.mock.patch("oden.config.validate_path_within_home")
     @unittest.mock.patch("oden.web_handlers.setup_handlers.get_oden_home_path")
     async def test_save_config_updates_setup_managed_keys(
-        self, mock_get_home, mock_validate_path, mock_validate_home, mock_set_pointer
+        self, mock_get_home, mock_validate_path, mock_validate_home, mock_set_pointer, mock_accounts
     ):
         """Setup-managed keys (vault_path, signal_number, display_name) should be updated."""
         import tempfile
