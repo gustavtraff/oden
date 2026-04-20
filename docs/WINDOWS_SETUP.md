@@ -71,6 +71,62 @@ docker run -d `
 
 ---
 
+## Volymer och sökvägar
+
+Oden i Docker använder två volymer — en för konfiguration och en för rapporter. Sökvägarna som du anger i setup-wizardens GUI är **containerns interna sökvägar** (t.ex. `/data`, `/vault`). Det är `volumes:`-sektionen i `docker-compose.yml` som bestämmer var dessa mappar faktiskt hamnar på din Windows-dator.
+
+### Standardkonfiguration
+
+```yaml
+volumes:
+  - oden-data:/data       # Config (config.db, signal-data) → namngiven Docker-volym
+  - ./vault:/vault        # Rapporter → mappen "vault" bredvid docker-compose.yml
+```
+
+| Container-sökväg | Vad den innehåller | Var det hamnar på Windows (standard) |
+|-------------------|--------------------|--------------------------------------|
+| `/data` | Konfiguration (`config.db`), signal-cli-data, loggar | Namngiven Docker-volym `oden-data` (hanteras av Docker) |
+| `/vault` | Markdown-rapporter organiserade per grupp | `.\vault` relativt till `docker-compose.yml` (t.ex. `C:\oden\vault`) |
+
+### Anpassa sökvägar
+
+Du kan ändra var data lagras på din Windows-dator genom att redigera `volumes:` i `docker-compose.yml`. Container-sökvägarna (`/data` och `/vault`) ska **inte** ändras — det är bara vänstersidan (host-sökvägen) du justerar.
+
+**Exempel — lagra config i en specifik mapp istället för en Docker-volym:**
+
+```yaml
+volumes:
+  - C:/oden-config:/data    # Config hamnar i C:\oden-config
+  - ./vault:/vault
+```
+
+**Exempel — peka vault mot en befintlig Obsidian-mapp:**
+
+```yaml
+volumes:
+  - oden-data:/data
+  - D:/Obsidian/Rapporter:/vault    # Rapporter sparas direkt i D:\Obsidian\Rapporter
+```
+
+**Exempel — båda på egna platser:**
+
+```yaml
+volumes:
+  - C:/oden-config:/data
+  - D:/Obsidian/Rapporter:/vault
+```
+
+> **Obs:** Använd framåtsnedstreck (`/`) i sökvägar i `docker-compose.yml`, även på Windows. Docker Desktop hanterar konverteringen automatiskt.
+
+Efter att du ändrat `docker-compose.yml`, starta om containern:
+
+```powershell
+docker compose down
+docker compose up -d
+```
+
+---
+
 ## Konfiguration (Setup-wizard)
 
 Efter att containern har startats:
@@ -80,10 +136,12 @@ Efter att containern har startats:
 
 | Steg | Beskrivning |
 |------|-------------|
-| **1. Hemkatalog** | Lämna standardvärdet `/data` (Docker-volym) |
+| **1. Hemkatalog** | Lämna standardvärdet `/data` — det är containerns interna sökväg (var den hamnar på Windows bestäms av `volumes:` i `docker-compose.yml`, se ovan) |
 | **2. Signal-konto** | Länka till ditt Signal-konto genom att skanna QR-koden med Signal-appen på din telefon (*Inställningar → Länkade enheter → Lägg till enhet*) |
-| **3. Vault-sökväg** | Ange `/vault` (mappas till din lokala `vault`-mapp) |
+| **3. Vault-sökväg** | Ange `/vault` — containerns interna sökväg (mappas till din Windows-mapp via `volumes:` i `docker-compose.yml`) |
 | **4. Obsidian-mall** | Valfritt — installerar grundinställningar och Map View-plugin |
+
+> **Viktigt:** Sökvägarna i setup-wizarden är alltid containerns interna sökvägar (`/data`, `/vault`). Ändra inte dessa — använd istället `volumes:` i `docker-compose.yml` för att styra var filerna hamnar på din Windows-dator.
 
 3. När setup är klar växlar webbgränssnittet till **dashboard-läge** och Oden börjar lyssna efter meddelanden.
 
