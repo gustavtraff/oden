@@ -328,7 +328,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: oden-windows-installer
-          path: Output/Oden-Setup-*.exe
+          path: scripts/Output/Oden-Setup-*.exe
 
   # Create release with all artifacts
   release:
