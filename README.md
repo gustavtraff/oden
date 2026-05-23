@@ -209,6 +209,7 @@ Vid första start visas en setup-wizard som guidar dig genom konfigurationen:
 - [REPORT_TEMPLATE.md](./docs/REPORT_TEMPLATE.md) - Mallsystem (Jinja2)
 - [WINDOWS_NATIVE_PLAN.md](./docs/WINDOWS_NATIVE_PLAN.md) - Native Windows installer: status och implementationsplan
 - [WINDOWS_SETUP.md](./docs/WINDOWS_SETUP.md) - Docker-baserad Windows-installation
+- [SETUP_GUIDE_WINDOWS.md](./docs/SETUP_GUIDE_WINDOWS.md) - Levande setup-guide (Docker + utveckling, Windows)
 
 ## Rekommenderad programvara
 
