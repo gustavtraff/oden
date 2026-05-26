@@ -1,0 +1,30 @@
+# Drift-mapp utanför git-repot (t.ex. C:\oden\docker-compose.yml)
+#
+# Använd denna fil om du utvecklar och vill testa olika git-branches i Docker
+# utan att blanda vault/config med källkoden.
+#
+# 1. Kopiera till drift-mappen:
+#      mkdir C:\oden
+#      copy docker-compose.oden-runtime.example.yml C:\oden\docker-compose.yml
+# 2. Redigera build.context till din klonade repos sökväg (använd / i sökvägar)
+# 3. mkdir C:\oden\vault
+# 4. cd C:\oden && docker compose up -d --build
+
+services:
+  oden:
+    build:
+      context: "C:/Users/<användarnamn>/GitHub/Oden"
+      dockerfile: Dockerfile
+    image: ghcr.io/gustavtraff/oden:local
+    ports:
+      - "8080:8080"
+    volumes:
+      - oden-data:/data
+      - ./vault:/vault
+    environment:
+      - ODEN_HOME=/data
+      - WEB_HOST=0.0.0.0
+    restart: unless-stopped
+
+volumes:
+  oden-data:
