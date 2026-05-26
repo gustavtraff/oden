@@ -1,0 +1,22 @@
+---
+description: Git workflow for the gustavtraff/oden personal fork
+alwaysApply: true
+---
+
+# Git workflow (gustavtraff/oden)
+
+This repository is a **personal fork**, not the upstream project.
+
+## Never do unless the user explicitly asks
+
+- Create pull requests (on this fork or anywhere else)
+- Push to upstream (`NicklasAndersson/oden`)
+- Open or suggest PRs against upstream
+- Propose "feature branch → PR → merge" as the default workflow
+
+## Default workflow
+
+- Work on `main` or a local branch
+- Commit only when the user explicitly requests a commit
+- Push to `origin` (`gustavtraff/oden`) only when the user explicitly requests a push
+- Pull latest `main` from `origin` before starting new work

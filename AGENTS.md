@@ -149,6 +149,8 @@ Every push to `main` triggers a macOS DMG build and a multi-arch Docker image pu
 - Snapshot releases are **not** shown as the "latest release" on GitHub
 
 ### Versioned Releases
+*(Upstream-projektet `NicklasAndersson/oden` — gäller inte denna fork.)*
+
 For stable releases, use git tags:
 1. Update `CHANGELOG.md` with new version section
 2. Commit changes to a feature branch
@@ -161,7 +163,7 @@ For stable releases, use git tags:
 
 **IMPORTANT:** Once a tag has been pushed and a build has started, that tag is immutable. Never delete and recreate a tag - always create a new patch version (e.g., v0.9.1 → v0.9.2).
 
-**Note:** Direct pushes to `main` are blocked by branch protection rules. All changes must go through pull requests with passing status checks.
+**Note:** Direct pushes to `main` are blocked by branch protection rules on upstream. All changes must go through pull requests with passing status checks. *(Gäller upstream — inte `gustavtraff/oden`.)*
 
 ## Testing Guidelines
 - Tests are in `tests/` using pytest
@@ -206,6 +208,14 @@ Markdown files: `DDHHMM-{phone}-{name}.md` (e.g., `161430-46701234567-Nicklas.md
 - The app is designed for Swedish Home Guard (Hemvärnet) intelligence reports
 
 ## GIT
-All features should be developed in feature branches and merged via pull requests to `main`. Direct pushes to `main` are blocked by branch protection rules. 
 
-Make shure to pull the latest `main` before starting a new feature branch to minimize merge conflicts. 
+**Det här är en personlig fork (`gustavtraff/oden`).** Följ detta — inte upstream-projektets PR-flöde:
+
+- **Aldrig** skapa pull requests om användaren inte uttryckligen ber om det
+- **Aldrig** pusha till upstream (`NicklasAndersson/oden`) eller öppna PR mot upstream
+- **Aldrig** föreslå att ändringar ska mergas via PR som standardarbetsflöde
+- Committa **endast** när användaren ber om det
+- Pusha till `origin` (`gustavtraff/oden`) **endast** när användaren ber om det
+- Utveckling kan ske direkt på `main` eller på en lokal branch som mergas/pushas till `origin/main`
+
+Hämta senaste `main` från `origin` innan du startar nytt arbete för att minska merge-konflikter.

@@ -246,8 +246,8 @@ Meddelanden som börjar med `--` sparas inte. `#help` / `#ok` triggar autosvar m
 
 1. `pytest -q`
 2. `ruff check . && ruff format .`
-3. Feature-branch → PR mot `main`
-4. CI bygger snapshot vid merge (Docker-image + ev. Windows `.exe`)
+3. Committa och pusha till `main` på **`gustavtraff/oden`** (din fork)
+4. CI bygger snapshot vid push till `main` (Docker-image på `ghcr.io/gustavtraff/oden` om aktiverat)
 5. Uppdatera drift:
 
 ```powershell
@@ -255,6 +255,8 @@ cd C:\oden
 docker compose pull
 docker compose up -d
 ```
+
+**Git-policy för denna fork:** ingen pull request och ingen push till upstream (`NicklasAndersson/oden`) — om inte du uttryckligen ber om det.
 
 ---
 
