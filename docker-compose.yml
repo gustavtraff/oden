@@ -1,7 +1,7 @@
 services:
   oden:
     build: .
-    image: ghcr.io/nicklasandersson/oden:latest
+    image: ghcr.io/gustavtraff/oden:local
     ports:
       - "8080:8080"
     volumes:

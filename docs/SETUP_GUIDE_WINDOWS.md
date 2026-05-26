@@ -147,8 +147,8 @@ docker compose ps          # status
 docker compose logs -f     # loggar
 docker compose stop        # stoppa
 docker compose up -d       # starta igen
-docker compose pull        # hämta ny image
-docker compose up -d       # starta med ny image
+docker compose build       # bygg om från git-repot (efter branch-byte)
+docker compose up -d       # starta med nybyggd image
 docker compose restart     # om QR-kod inte dyker upp direkt
 ```
 
@@ -244,19 +244,75 @@ Meddelanden som börjar med `--` sparas inte. `#help` / `#ok` triggar autosvar m
 
 ## Del 3: Utvecklingsflöde
 
+### Git
+
 1. `pytest -q`
 2. `ruff check . && ruff format .`
 3. Committa och pusha till `main` på **`gustavtraff/oden`** (din fork)
-4. CI bygger snapshot vid push till `main` (Docker-image på `ghcr.io/gustavtraff/oden` om aktiverat)
-5. Uppdatera drift:
+
+**Git-policy för denna fork:** ingen pull request och ingen push till upstream (`NicklasAndersson/oden`) — om inte du uttryckligen ber om det.
+
+### Docker — alltid din kod, inte upstream
+
+Drift-mappen `C:\oden` innehåller vault och config-volym. **Själva Oden-koden byggs från ditt git-repo** — inte från `ghcr.io/nicklasandersson/oden`.
+
+| Plats | Roll |
+|-------|------|
+| `C:\Users\Gustav Träff\GitHub\Oden` | Källkod — byt branch här |
+| `C:\oden` | Drift — vault, Docker-volym (`config.db`, Signal-data), `docker compose` |
+
+**Kör aldrig** `docker compose pull` i drift — det skulle hämta upstream-imagen igen. Använd `docker compose build` istället.
+
+### Testa en feature-branch (t.ex. MGRS)
 
 ```powershell
+# 1. Byt branch i repot
+cd "C:\Users\Gustav Träff\GitHub\Oden"
+git checkout feature/mgrs-stalle-support   # eller vilken branch som helst
+
+# 2. Bygg om och starta om (config och Signal-länk behålls)
 cd C:\oden
-docker compose pull
+docker compose build
+docker compose up -d
+
+# 3. Verifiera att rätt kod körs
+docker exec oden-oden-1 python -c "from oden.location_parser import extract_location; print(extract_location('Stalle: 33VWE 64874 95103, test'))"
+```
+
+Om kommandot i steg 3 skriver ut koordinater (t.ex. `('58.591473', '16.116022')`) kör du feature-branchen. `ModuleNotFoundError: location_parser` betyder att du fortfarande kör gammal kod — kör `docker compose build` igen.
+
+### Tillbaka till main
+
+```powershell
+cd "C:\Users\Gustav Träff\GitHub\Oden"
+git checkout main
+cd C:\oden
+docker compose build
 docker compose up -d
 ```
 
-**Git-policy för denna fork:** ingen pull request och ingen push till upstream (`NicklasAndersson/oden`) — om inte du uttryckligen ber om det.
+### End-to-end-test i Signal
+
+Skicka ett testmeddelande till en whitelistad grupp och kontrollera vault-filen i Obsidian. För MGRS:
+
+```
+Stalle: 33VWE 64874 95103, Fiskebyvagen, Norrkoping
+```
+
+Rapporten ska få en rad ungefär: `[Position](geo:58.591473,16.116022)`.
+
+### CI-snapshots (valfritt)
+
+Vid push till `main` kan GitHub Actions bygga `ghcr.io/gustavtraff/oden:snapshot-<sha>`. För branch-testning räcker lokalt `docker compose build` — snabbare och enklare.
+
+### Stoppa containern
+
+Web-GUI:s *Stäng av* startar om containern p.g.a. `restart: unless-stopped`. Stoppa på riktigt:
+
+```powershell
+cd C:\oden
+docker compose stop
+```
 
 ---
 
