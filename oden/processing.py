@@ -4,7 +4,6 @@ import datetime
 import json
 import logging
 import os
-import re
 from typing import Any
 
 from oden import config as cfg
@@ -19,6 +18,7 @@ from oden.formatting import (
 )
 from oden.groups_db import upsert_group
 from oden.link_formatter import apply_regex_links
+from oden.location_parser import extract_location
 from oden.responses_db import get_response_by_keyword
 from oden.template_loader import render_append, render_report
 
@@ -103,38 +103,9 @@ def _apply_regex_links(text: str | None) -> str | None:
     return apply_regex_links(text)
 
 
-# Coordinate pattern: optional minus, digits, dot, digits (e.g. 59.514828 or -33.8688)
-_COORD = r"(-?\d+\.\d+)"
-
-# Compiled location URL patterns, tried in order.
-_LOCATION_PATTERNS: list[re.Pattern[str]] = [
-    # Google Maps: maps.google.com/maps?q=LAT%2CLON  or  www.google.com/maps?q=LAT,LON
-    re.compile(rf"https://(?:www\.)?(?:maps\.)?google\.com/maps\?q={_COORD}(?:%2[cC]|,){_COORD}"),
-    # Apple Maps: maps.apple.com/?q=LAT,LON  or  maps.apple.com/?ll=LAT,LON
-    re.compile(rf"https://maps\.apple\.com/\?(?:[^\s]*&)?(?:q|ll)={_COORD},{_COORD}"),
-    # OpenStreetMap query params: ?mlat=LAT&mlon=LON
-    re.compile(rf"https://(?:www\.)?openstreetmap\.org/?\?(?:[^\s]*&)?mlat={_COORD}&(?:[^\s]*&)?mlon={_COORD}"),
-    # OpenStreetMap hash fragment: #map=ZOOM/LAT/LON
-    re.compile(rf"https://(?:www\.)?openstreetmap\.org/?[^\s]*#map=[\d.]+/{_COORD}/{_COORD}"),
-]
-
-
 def extract_coordinates(msg: str) -> tuple[str, str] | None:
-    """Extract latitude and longitude from a location URL in a message.
-
-    Supports Google Maps, Apple Maps, and OpenStreetMap URLs.
-
-    Args:
-        msg: The message text to search for location URLs.
-
-    Returns:
-        A (lat, lon) tuple of strings, or None if no location URL is found.
-    """
-    for pattern in _LOCATION_PATTERNS:
-        match = pattern.search(msg)
-        if match:
-            return match.group(1), match.group(2)
-    return None
+    """Extract WGS84 coordinates from a message (map URL or MGRS ``Ställe:``)."""
+    return extract_location(msg)
 
 
 def _extract_message_details(
@@ -317,7 +288,7 @@ async def process_message(obj: dict[str, Any], reader: asyncio.StreamReader, wri
                 # Extract location coordinates from the message
                 append_lat, append_lon = None, None
                 if msg:
-                    append_coords = extract_coordinates(msg)
+                    append_coords = extract_location(msg)
                     if append_coords:
                         append_lat, append_lon = append_coords
 
@@ -405,7 +376,7 @@ async def process_message(obj: dict[str, Any], reader: asyncio.StreamReader, wri
 
     lat, lon = None, None
     if msg:
-        coords = extract_coordinates(msg)
+        coords = extract_location(msg)
         if coords:
             lat, lon = coords
 

@@ -126,7 +126,7 @@ Plugin: [obsidian-map-view](https://github.com/esm7/obsidian-map-view). Verifier
 
 **Använda kartan:**
 
-- Oden skriver `[Position](geo:lat,lon)` i rapportfiler när meddelandet innehåller en kartlänk (Google/Apple/OSM) eller Signals platsdelning
+- Oden skriver `[Position](geo:lat,lon)` i rapportfiler när meddelandet innehåller en kartlänk (Google/Apple/OSM), Signals platsdelning, eller MGRS i fältet `Ställe:` (7S-rapporter)
 - Klicka på geo-länken i en rapport — Map View öppnar platsen
 - Alternativt: kommandopaletten (`Ctrl+P`) → sök **Map View** för att öppna kartvyn
 
@@ -203,7 +203,7 @@ ruff format .
 
 ## Positioner och kartor
 
-Oden extraherar koordinater från **kartlänkar i meddelandetexten** — inte från fria koordinater eller adresser. Detaljer: [FEATURES.md — Platsextraktion](./FEATURES.md#platsextraktion).
+Oden extraherar koordinater från **kartlänkar** och **MGRS i `Ställe:`** (7S-rapporter) — inte från fria koordinater eller adresser. Detaljer: [FEATURES.md — Platsextraktion](./FEATURES.md#platsextraktion).
 
 ### Vad som fungerar i Signal
 
@@ -213,8 +213,9 @@ Oden extraherar koordinater från **kartlänkar i meddelandetexten** — inte fr
 | Google Maps-länk | `https://maps.google.com/maps?q=59.51,17.76` (eller `%2C` mellan lat/lon) |
 | Apple Maps-länk | `https://maps.apple.com/?q=...` eller `?ll=...` |
 | OpenStreetMap-länk | `?mlat=...&mlon=...` eller `#map=zoom/lat/lon` |
+| MGRS i `Ställe:` | `Ställe: 33VWE 64874 95103, Fiskebyvägen` → konverteras till WGS84 |
 | Bara text `"59.51, 17.76"` | **Fungerar inte** |
-| Bara gatuadress | **Fungerar inte** |
+| Bara gatuadress (utan MGRS) | **Fungerar inte** |
 
 ### Vad som skrivs i rapportfilen
 

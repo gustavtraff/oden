@@ -31,6 +31,7 @@ if os.path.exists('oden/templates/web'):
 hiddenimports = [
     'oden.config',
     'oden.processing',
+    'oden.location_parser',
     'oden.formatting',
     'oden.link_formatter',
     'oden.attachment_handler',
@@ -45,6 +46,7 @@ hiddenimports = [
     'oden.app_state',
     'oden.tray',
     'PIL',
+    'mgrs',
 ]
 
 if sys.platform == 'darwin':

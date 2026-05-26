@@ -125,7 +125,7 @@ När ett meddelande inte matchar något specialfall skapas en ny `.md`-fil:
 
 1. **Metadata extraheras** — avsändare, grupp, tidsstämpel, bilagor.
 2. **Regex-länkning** — textinnehållet analyseras mot konfigurerade mönster och matchningar omvandlas till Obsidian-länkar `[[…]]`.
-3. **Platsextraktion** — Google Maps-, Apple Maps- och OSM-URL:er konverteras till `geo:`-koordinater.
+3. **Platsextraktion** — Google Maps-, Apple Maps- och OSM-URL:er konverteras till `geo:`-koordinater. MGRS i fältet `Ställe:` (7S-rapporter) konverteras till WGS84 om ingen kartlänk finns.
 4. **Bilagor sparas** — i en unik undermapp under valvet.
 5. **Citat formateras** — om meddelandet är ett svar, inkluderas det citerade meddelandet som blockquote.
 6. **Jinja2-mall renderas** — `report.md.j2`-mallen renderas med alla variabler.
@@ -364,7 +364,7 @@ Signal-meddelanden kan innehålla bilagor (bilder, filer, etc.). Oden hanterar d
 
 ## Platsextraktion
 
-Oden extraherar automatiskt koordinater från plats-URL:er i meddelanden och konverterar dem till `geo:`-länkar som fungerar med Obsidian Map View-pluginet.
+Oden extraherar automatiskt koordinater från meddelanden och konverterar dem till `geo:`-länkar som fungerar med Obsidian Map View-pluginet. Kartlänkar har prioritet framför MGRS.
 
 ### Stödda URL-format
 
@@ -376,6 +376,17 @@ Oden extraherar automatiskt koordinater från plats-URL:er i meddelanden och kon
 | **Apple Maps** | `maps.apple.com/?ll=LAT,LON` | `maps.apple.com/?ll=59.33,18.07` |
 | **OpenStreetMap** | `openstreetmap.org/?mlat=LAT&mlon=LON` | `openstreetmap.org/?mlat=59.33&mlon=18.07` |
 | **OpenStreetMap** | `openstreetmap.org/#map=ZOOM/LAT/LON` | `openstreetmap.org/#map=15/59.33/18.07` |
+
+### MGRS i 7S-rapporter
+
+Om meddelandet saknar kartlänk men innehåller ett MGRS-referensnummer på raden `Ställe:` konverteras det till WGS84-koordinater.
+
+| Egenskap | Beskrivning |
+|----------|-------------|
+| **Fält** | `Ställe:` (case-insensitive) |
+| **Format** | Zon + band + 100 km-ruta + östning + nordning, t.ex. `33VWE 64874 95103` |
+| **Adress efter komma** | Ignoreras — `Ställe: 33VWE 64874 95103, Fiskebyvägen, Norrköping` |
+| **Prioritet** | Kartlänk i samma meddelande vinner alltid över MGRS |
 
 ### Utdata
 
