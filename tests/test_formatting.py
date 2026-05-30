@@ -13,7 +13,9 @@ from oden.formatting import (
     get_message_filepath,
     get_safe_group_dir_path,
     get_unique_filename,
+    update_location_frontmatter,
 )
+from oden.template_loader import render_report
 
 
 class TestFormatting(unittest.TestCase):
@@ -139,6 +141,74 @@ class TestFormatting(unittest.TestCase):
         formatted_multiline = _format_quote(quote_multiline)
         self.assertIn("> Line 1", formatted_multiline)
         self.assertIn("> Line 2", formatted_multiline)
+
+
+class TestLocationFrontmatter(unittest.TestCase):
+    def test_update_location_adds_property_when_missing(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+            f.write("---\nfileid: test-123\n---\n\n# Group\n")
+            path = f.name
+
+        try:
+            self.assertTrue(update_location_frontmatter(path, "58.591473", "16.116022"))
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("location: [58.591473, 16.116022]", content)
+            self.assertFalse(update_location_frontmatter(path, "58.591473", "16.116022"))
+        finally:
+            os.unlink(path)
+
+    def test_update_location_replaces_existing(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+            f.write("---\nfileid: test-123\nlocation: [59.0, 18.0]\n---\n\n# Group\n")
+            path = f.name
+
+        try:
+            self.assertTrue(update_location_frontmatter(path, "59.514828", "17.767852"))
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("location: [59.514828, 17.767852]", content)
+            self.assertNotIn("location: [59.0, 18.0]", content)
+        finally:
+            os.unlink(path)
+
+    def test_update_location_no_op_without_frontmatter(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+            f.write("# No frontmatter\n")
+            path = f.name
+
+        try:
+            self.assertFalse(update_location_frontmatter(path, "58.591473", "16.116022"))
+        finally:
+            os.unlink(path)
+
+    def test_render_report_includes_location_when_coords_present(self):
+        content = render_report(
+            fileid="161410-123-John",
+            group_title="Test Group",
+            group_id="group123",
+            tnr="161410",
+            timestamp_iso="2026-01-01T16:14:10+01:00",
+            sender_display="John",
+            lat="58.591473",
+            lon="16.116022",
+            message="Ställe: 33VWE 64874 95103",
+        )
+        self.assertIn("location: [58.591473, 16.116022]", content)
+        self.assertIn("[Position](geo:58.591473,16.116022)", content)
+
+    def test_render_report_omits_location_without_coords(self):
+        content = render_report(
+            fileid="161410-123-John",
+            group_title="Test Group",
+            group_id="group123",
+            tnr="161410",
+            timestamp_iso="2026-01-01T16:14:10+01:00",
+            sender_display="John",
+            message="Ställe: Fiskebyvägen, Norrköping",
+        )
+        self.assertNotIn("location:", content)
+        self.assertNotIn("geo:", content)
 
 
 if __name__ == "__main__":

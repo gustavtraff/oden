@@ -156,6 +156,53 @@ def _extract_fileid_from_file(filepath: str) -> str | None:
         return None
 
 
+def update_location_frontmatter(filepath: str, lat: str, lon: str) -> bool:
+    """Add or update ``location: [lat, lon]`` frontmatter for Map View.
+
+    On append (C1), the frontmatter location is updated to the latest coordinates
+    while geo links in the body retain every position.
+
+    Returns:
+        True if the file was updated, False otherwise.
+    """
+    try:
+        with open(filepath, encoding="utf-8") as f:
+            content = f.read()
+    except OSError as e:
+        logger.error("Failed to read file for location frontmatter: %s", e)
+        return False
+
+    if not content.startswith("---"):
+        return False
+
+    end_idx = content.find("---", 3)
+    if end_idx == -1:
+        return False
+
+    frontmatter = content[3:end_idx]
+    location_line = f"location: [{lat}, {lon}]"
+    location_pattern = re.compile(r"^location\s*:.*$", re.MULTILINE)
+
+    if location_pattern.search(frontmatter):
+        new_frontmatter = location_pattern.sub(location_line, frontmatter, count=1)
+        if new_frontmatter == frontmatter:
+            return False
+    else:
+        if frontmatter and not frontmatter.endswith("\n"):
+            frontmatter += "\n"
+        new_frontmatter = f"{frontmatter}{location_line}\n"
+
+    new_content = f"---{new_frontmatter}---{content[end_idx + 3 :]}"
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(new_content)
+    except OSError as e:
+        logger.error("Failed to write location frontmatter to %s: %s", filepath, e)
+        return False
+
+    return True
+
+
 def find_latest_file_by_fileid(group_dir: str, source_name: str | None, source_number: str | None) -> str | None:
     """
     Finds the most recent file by a given sender in a group directory using fileid lookup.

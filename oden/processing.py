@@ -15,6 +15,7 @@ from oden.formatting import (
     format_sender_display,
     get_message_filepath,
     get_safe_group_dir_path,
+    update_location_frontmatter,
 )
 from oden.groups_db import upsert_group
 from oden.link_formatter import apply_regex_links
@@ -303,6 +304,8 @@ async def process_message(obj: dict[str, Any], reader: asyncio.StreamReader, wri
                 )
 
                 try:
+                    if append_lat and append_lon:
+                        update_location_frontmatter(latest_file, append_lat, append_lon)
                     with open(latest_file, "a", encoding="utf-8") as f:
                         f.write(append_content)
                     logger.info(f"APPENDED (reply or ++) TO: {latest_file}")

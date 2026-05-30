@@ -396,7 +396,7 @@ Extraherade koordinater läggs till i rapportmallens kontext som `lat` och `lon`
 [Position](geo:59.33,18.07)
 ```
 
-Koordinaterna lagras även i frontmatter som `locations`-fält för Obsidian Map View-kompatibilitet.
+Koordinaterna lagras i frontmatter som `location: [lat, lon]` (Map View, Dataview) och som `[Position](geo:lat,lon)` i brödtexten. Vid append uppdateras frontmatter till senaste platsen (C1); alla geo-länkar i brödtexten behålls.
 
 ---
 

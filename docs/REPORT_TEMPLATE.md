@@ -78,7 +78,7 @@ Use `{% for %}` for lists like attachments:
 Example (no extra blank lines):
 ```jinja
 {% if lat and lon -%}
-locations: ""
+location: [{{ lat }}, {{ lon }}]
 {% endif -%}
 ```
 
@@ -90,7 +90,7 @@ locations: ""
 ---
 fileid: {{ fileid }}
 {% if lat and lon -%}
-locations: ""
+location: [{{ lat }}, {{ lon }}]
 {% endif -%}
 ---
 

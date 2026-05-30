@@ -1,5 +1,8 @@
 ---
 fileid: {{ fileid }}
+{% if lat and lon -%}
+location: [{{ lat }}, {{ lon }}]
+{% endif -%}
 ---
 
 # {{ group_title }}
